@@ -172,7 +172,7 @@ class SimulationExecutor:
         for edge in graph.edges:
             in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
 
-        queue = [st.id for st in graph.subtasks if in_degree[st] == 0]
+        queue = [st.id for st in graph.subtasks if in_degree[st.id] == 0]
         result = []
 
         while queue:

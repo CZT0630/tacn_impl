@@ -2,7 +2,7 @@
 
 > 目标：让代码向 README 描述的 TACN 核心能力靠拢（三控制面、双闭环、MTCC 联合编排）
 > 创建日期：2026-05-24
-> 状态：阶段一已完成，后续阶段待执行
+> 状态：阶段一、二已完成，后续阶段待执行
 
 ---
 
@@ -154,53 +154,31 @@ tacn_impl/
 | `experiments.py` 缺少 await | 所有 `process()` 调用加上 await |
 | `demo_agent.py`/`demo_multi_agent.py` 调用不存在的方法 | 在 `AgentManager` 中补充 `execute_plan()` 和 `get_agent_stats()` |
 | `demo.py` 非 async 函数调用 async 方法 | 所有 demo 函数改为 async |
+| `demo_agent.py`/`demo_multi_agent.py` `execute_plan()` 未 await | 加上 await |
+| `demo_agent_communication.py` 引用不存在的 `agent_manager.message_bus` | 改为 `agent_manager.factory.message_bus` |
+| `demo_agent_communication.py` 调用不存在的 `get_agents_by_type` | 移除未使用的调用 |
+| `simulation.py` `in_degree[st]` 用 SubTask 对象作 dict key | 改为 `in_degree[st.id]` |
+| 8 个包缺少 `__init__.py` | 补充 `core/parser/registry/router/baselines/workload/evaluation/api` |
 
 #### 1.3 已完成的 import 更新
 
 所有引用 `backend.orchestrator` 和 `backend.executor` 的文件已更新为 `backend.orchestration` 和 `backend.simulation`。
-| `backend/agent/llm_agent.py` | `backend/agent/llm_agent.py` | |
-| `backend/agent/terminal_agent.py` | `backend/agent/terminal_agent.py` | |
-| `backend/agent/peer_agent.py` | `backend/agent/peer_agent.py` | |
-| `backend/agent/edge_agent.py` | `backend/agent/edge_agent.py` | |
-| `backend/agent/cloud_agent.py` | `backend/agent/cloud_agent.py` | |
-| `backend/agent/factory.py` | `backend/agent/factory.py` | |
-| `backend/agent/tools.py` | `backend/agent/tools.py` | |
-| `backend/agent/message.py` | `backend/registry/bus.py` | MessageBus 归属 L2 |
-| `backend/orchestrator/tacn_system.py` | `backend/orchestration/execution_engine.py` | |
-| `backend/orchestrator/engine.py` | 删除（功能与 tacn_system.py 重复且有 bug） | |
-| `backend/workload/generator.py` | `backend/workload/generator.py` | |
-| `backend/evaluation/metrics.py` | `backend/evaluation/metrics.py` | |
-| `backend/executor/simulation.py` | `backend/simulation/simulation.py` | 已重命名 |
-| `backend/baselines/cloud_only.py` | `backend/baselines/cloud_only.py` | |
-| `backend/baselines/resource_aware_cpn.py` | `backend/baselines/resource_aware_cpn.py` | |
-| `backend/baselines/semantic_router.py` | `backend/baselines/semantic_router.py` | |
-| `backend/llm/client.py` | `backend/llm/client.py` | |
-| `backend/llm/config.py` | `backend/llm/config.py` | |
-| `backend/main.py` | `backend/api/app.py` | FastAPI 应用保留 |
 
-#### 1.3 更新所有 import 路径
+仅发生了两处目录重命名，文件名保持不变（用户决策：当前文件名已足够合理）：
 
-迁移后，所有文件内的 import 需要从旧路径更新为新路径。例如：
+| 旧路径 | 新路径 |
+|---|---|
+| `backend/orchestrator/engine.py` | `backend/orchestration/engine.py` |
+| `backend/orchestrator/tacn_system.py` | `backend/orchestration/tacn_system.py` |
+| `backend/executor/simulation.py` | `backend/simulation/simulation.py` |
 
-```python
-# 旧
-from backend.core.models import Intent
-from backend.parser.intent_parser import LLMIntentParser
-from backend.registry.agent_registry import AgentRegistry
-from backend.agent.factory import AgentManager
-
-# 新
-from backend.tacn.core.models import Intent
-from backend.tacn.layers.l3_orchestration.intent import LLMIntentParser
-from backend.tacn.layers.l2_terminal_agents.registry import AgentRegistry
-from backend.tacn.agents.factory import AgentManager
-```
+其余文件路径不变。
 
 #### 1.4 修复已知 Bug
 
 **Bug 1: `engine.py` 类名错误 + 同步调用 async**
 
-原 `backend/orchestrator/engine.py` 与 `tacn_system.py` 功能重复且有 bug，直接删除。保留 `tacn_system.py`（迁移为 `execution_engine.py`）作为唯一执行引擎。
+`backend/orchestration/engine.py` 中导入不存在的 `IntentParser`/`SubTaskGraphBuilder`，改为 `LLMIntentParser`/`LLMSubTaskBuilder`；`process_request` 和 `process_intent` 改为 async。
 
 **Bug 2: `experiments.py` 缺少 await**
 
@@ -230,7 +208,7 @@ result_semantic = await semantic_router.process(request)
 - [x] experiments.py 缺少 await 已修复
 - [x] demo 脚本已修复（async + 缺失方法）
 - [x] README 项目结构已更新
-- [ ] 所有 demo 脚本能正常运行（待验证）
+- [x] 所有 demo 脚本能正常运行（5/5 PASS）
 
 ---
 
@@ -722,10 +700,10 @@ TACN_USE_REAL_LLM=false
 
 #### 2.6 验证标准
 
-- [ ] `python main.py run --config configs/default.yaml` 能解析配置（即使实验逻辑未完成）
-- [ ] `python main.py serve` 能启动 FastAPI
-- [ ] 配置文件能正确加载并返回 core_catalog / scenario_catalog / experiment_config
-- [ ] NetworkModel 能正确返回各位置间的时延和带宽
+- [x] `python main.py run --config configs/default.yaml` 能解析配置（即使实验逻辑未完成）
+- [x] `python main.py serve` 能启动 FastAPI
+- [x] 配置文件能正确加载并返回 core_catalog / scenario_catalog / experiment_config
+- [x] NetworkModel 能正确返回各位置间的时延和带宽
 
 ---
 
@@ -1072,13 +1050,125 @@ def create_default_context_registry() -> ContextRegistry:
 
 更新 `backend/registry/registry.py` 中的 `create_default_registry()`，为每个 Agent 增加 `supported_models`、`context_sources` 字段。同时增加 `reliability_score` 等反馈字段的初始值。
 
-#### 3.6 验证标准
+#### 3.6 AgentRuntime 抽象层
+
+**设计目标：** 将 Agent 实现与编排层解耦。编排层通过 `AgentRuntime` 接口调度 Agent，不关心具体实现（当前 mock、未来 Claude SDK / LangGraph / 自研均可）。后续选定 Agent 框架后，只需新增一个 runtime 实现，编排层零改动。
+
+新建 `backend/agent/runtime.py`：
+
+```python
+"""Agent 运行时抽象 - 编排层的调度目标."""
+from __future__ import annotations
+from abc import ABC, abstractmethod
+from typing import Any
+from backend.core.models import (
+    AgentCapability,
+    CapabilityType,
+    ExecutionPlan,
+    SubTask,
+    SubTaskResult,
+)
+
+
+class AgentRuntime(ABC):
+    """Agent 运行时接口.
+
+    编排层（OrchestrationEngine / MTCCOrchestrator）通过此接口调度 Agent，
+    不依赖具体的 Agent 实现（LLMAgent / Claude SDK / LangGraph 等）。
+    """
+
+    @abstractmethod
+    async def execute(self, subtask: SubTask, context: dict[str, Any] | None = None) -> SubTaskResult:
+        """执行单个子任务.
+
+        Args:
+            subtask: 子任务定义
+            context: 执行上下文（上游结果、环境信息等）
+
+        Returns:
+            子任务执行结果
+        """
+        ...
+
+    @abstractmethod
+    async def execute_plan(self, plan: ExecutionPlan) -> dict[str, Any]:
+        """执行整个计划（含并行组调度）.
+
+        Args:
+            plan: 完整执行计划
+
+        Returns:
+            执行摘要 {"status", "total_latency_ms", "total_cost", "results"}
+        """
+        ...
+
+    @abstractmethod
+    def get_capabilities(self) -> list[CapabilityType]:
+        """声明当前 runtime 支持的能力列表."""
+        ...
+
+    def get_stats(self) -> dict[str, Any]:
+        """获取运行时统计信息（可选覆写）."""
+        return {}
+```
+
+将现有实现包装为 `MockAgentRuntime`：
+
+```python
+"""MockAgentRuntime - 基于现有 LLMAgent 的运行时实现."""
+from backend.agent.runtime import AgentRuntime
+from backend.agent.factory import AgentManager
+from backend.registry.agent_registry import AgentRegistry
+
+
+class MockAgentRuntime(AgentRuntime):
+    """基于当前 LLMAgent mock 的运行时实现.
+
+    包装现有 AgentManager，对外暴露 AgentRuntime 接口。
+    """
+
+    def __init__(self, registry: AgentRegistry):
+        self._manager = AgentManager(registry)
+        self._manager.initialize()
+
+    async def execute(self, subtask, context=None):
+        # 委派给对应 Agent 执行
+        ...
+
+    async def execute_plan(self, plan):
+        return await self._manager.execute_plan(plan)
+
+    def get_capabilities(self):
+        return self._manager.get_available_capabilities()
+
+    def get_stats(self):
+        return self._manager.get_agent_stats()
+```
+
+编排层改造（阶段四）：`OrchestrationEngine` / `MTCCOrchestrator` 构造时接收 `AgentRuntime` 而非 `AgentManager`。
+
+```
+OrchestrationEngine(registry, runtime: AgentRuntime)
+                          │
+                          ▼
+                   runtime.execute_plan(plan)
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+   MockAgentRuntime  ClaudeAgentRuntime  LangGraphRuntime
+   (当前 mock)       (未来接入)         (未来接入)
+```
+
+#### 3.7 验证标准
 
 - [ ] `ModelRegistry` 能注册/查询/按任务类型筛选模型
 - [ ] `ToolRegistry` 能注册/查询/按能力筛选工具
 - [ ] `ContextRegistry` 能注册/查询/按位置和隐私级别筛选上下文源
 - [ ] `AgentProfile` 包含完整的模型/工具/上下文/反馈字段
 - [ ] `create_default_registry()` 返回增强后的 Agent 列表
+- [ ] `AgentRuntime` 接口定义完成（execute / execute_plan / get_capabilities）
+- [ ] `MockAgentRuntime` 包装现有 AgentManager，所有 demo 脚本通过
+- [ ] 编排层可选依赖 `AgentRuntime` 接口（阶段四改造，此阶段仅定义接口）
 
 ---
 
@@ -2190,7 +2280,7 @@ mkdir -p outputs/magazine/reports
 |---|---|---|---|---|
 | 阶段一：目录重组 + Bug 修复 | **P0** | 2-3 天 | 无 | 四层目录结构、import 修正、bug 修复 |
 | 阶段二：配置系统 + L1 | **P1** | 2 天 | 阶段一 | YAML 配置、NetworkModel、CLI 入口 |
-| 阶段三：L2 Registry 体系 | **P1** | 2-3 天 | 阶段一 | Model/Tool/Context Registry、增强 AgentProfile |
+| 阶段三：L2 Registry + AgentRuntime | **P1** | 2-3 天 | 阶段一 | Model/Tool/Context Registry、增强 AgentProfile、AgentRuntime 接口 |
 | 阶段四：MTCC + 控制面 | **P0** | 3-4 天 | 阶段二、三 | MTCCOrchestrator、三控制面 |
 | 阶段五：闭环反馈 + Agent 差异化 | **P1** | 2-3 天 | 阶段四 | ExecutionFeedback、四种 Agent 差异化 |
 | 阶段六：实验脚本 + 测试 | **P2** | 2-3 天 | 阶段五 | 实验流水线、测试、文档 |

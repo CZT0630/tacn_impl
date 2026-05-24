@@ -74,7 +74,7 @@ async def demo_multi_agent():
     print("开始执行...")
     print("-" * 40)
 
-    execution_result = agent_manager.execute_plan(plan)
+    execution_result = await agent_manager.execute_plan(plan)
 
     print(f"\n执行状态: {execution_result['status']}")
     print(f"总延迟: {execution_result['total_latency_ms']:.1f} ms")

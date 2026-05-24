@@ -26,7 +26,7 @@ async def demo_agent_communication():
     agent_manager.initialize()
 
     # 获取消息总线
-    message_bus = agent_manager.message_bus
+    message_bus = agent_manager.factory.message_bus
 
     # 显示所有Agent
     print("\n已注册的Agent:")
@@ -42,10 +42,6 @@ async def demo_agent_communication():
     print("-" * 40)
 
     # 获取一个终端Agent和一个边缘Agent
-    terminal_agents = agent_manager.factory.get_agents_by_type(
-        type(agent_manager.factory.get_agent(list(agents.keys())[0]))
-    )
-
     terminal = None
     edge = None
     for agent in agents.values():
