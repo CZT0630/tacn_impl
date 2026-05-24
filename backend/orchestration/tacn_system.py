@@ -21,12 +21,17 @@ from backend.parser.subtask_builder import LLMSubTaskBuilder
 from backend.registry.agent_registry import AgentRegistry
 from backend.router.capability_router import AgentCapabilityRouter, RoutingConfig
 from backend.agent.factory import AgentManager
+from backend.agent.runtime import AgentRuntime
 
 
 class TACNSystem:
     """TACN系统 - 串联整个流水线.
 
     流程: 请求 → 意图解析(LLM) → 子任务分解(LLM) → 能力路由(算法) → 执行 → 汇总
+
+    支持两种路由模式:
+    - MTCC 模式: 传入 model_registry + tool_registry + context_registry + network_model
+    - 简单模式: 仅使用 capability_router（向后兼容）
 
     支持两种 LLM 接入方式:
     - llm_config: LLMConfig 对象（推荐）
@@ -39,6 +44,14 @@ class TACNSystem:
         llm_client: LLMClient | None = None,
         llm_config: LLMConfig | None = None,
         routing_config: Optional[RoutingConfig] = None,
+        # MTCC 参数
+        model_registry=None,
+        tool_registry=None,
+        context_registry=None,
+        network_model=None,
+        mtcc_config=None,
+        # AgentRuntime
+        runtime: Optional[AgentRuntime] = None,
     ):
         self.registry = registry
 
@@ -52,9 +65,43 @@ class TACNSystem:
 
         self.intent_parser = LLMIntentParser(resolved_client)
         self.subtask_builder = LLMSubTaskBuilder(resolved_client)
-        self.router = AgentCapabilityRouter(registry, routing_config)
-        self.agent_manager = AgentManager(registry, resolved_client)
-        self.agent_manager.initialize()
+
+        # MTCC 模式判断
+        self.use_mtcc = all(
+            x is not None
+            for x in [model_registry, tool_registry, context_registry, network_model]
+        )
+
+        if self.use_mtcc:
+            from backend.orchestration.mtcc_orchestrator import (
+                MTCCConfig,
+                MTCCOrchestrator,
+            )
+            from backend.control_planes.resource_control import ResourceControlPlane
+            from backend.control_planes.semantic_control import SemanticControlPlane
+            from backend.control_planes.trust_privacy_control import TrustPrivacyControlPlane
+
+            cfg = mtcc_config or MTCCConfig()
+            self.mtcc = MTCCOrchestrator(
+                registry, model_registry, tool_registry,
+                context_registry, network_model, cfg,
+            )
+            self.resource_control = ResourceControlPlane(network_model, None, registry)
+            self.semantic_control = SemanticControlPlane(
+                registry, model_registry, tool_registry, context_registry,
+            )
+            self.trust_control = TrustPrivacyControlPlane()
+        else:
+            self.router = AgentCapabilityRouter(registry, routing_config)
+
+        # AgentRuntime 或 AgentManager
+        if runtime is not None:
+            self.runtime = runtime
+            self.agent_manager = runtime.manager if hasattr(runtime, 'manager') else None
+        else:
+            self.runtime = None
+            self.agent_manager = AgentManager(registry, resolved_client)
+            self.agent_manager.initialize()
 
     async def process_request(
         self,
@@ -81,8 +128,12 @@ class TACNSystem:
         # 3. 计算关键路径
         critical_path = self.subtask_builder.get_critical_path(subtask_graph)
 
-        # 4. 算法路由: 子任务 → Agent
-        assignments = self.router.route_subtask_graph(subtask_graph)
+        # 4. 路由: 子任务 → Agent
+        if self.use_mtcc:
+            mtcc_decisions = self.mtcc.orchestrate_graph(subtask_graph)
+            assignments = [self._decision_to_assignment(d) for d in mtcc_decisions]
+        else:
+            assignments = self.router.route_subtask_graph(subtask_graph)
 
         # 5. 计算并行组
         parallel_groups = self._calculate_parallel_groups(subtask_graph)
@@ -104,6 +155,7 @@ class TACNSystem:
                 "creation_time_ms": (time.time() - start_time) * 1000,
                 "num_subtasks": len(subtask_graph.subtasks),
                 "num_assignments": len(assignments),
+                "routing_mode": "mtcc" if self.use_mtcc else "simple",
             },
         )
 
@@ -232,3 +284,14 @@ class TACNSystem:
             if a.subtask_id == subtask_id:
                 return a
         return None
+
+    def _decision_to_assignment(self, decision) -> AgentAssignment:
+        """将 MTCCDecision 转换为 AgentAssignment."""
+        agent = self.registry.get_agent(decision.selected_agent_id)
+        return AgentAssignment(
+            subtask_id=decision.subtask_id,
+            agent_id=decision.selected_agent_id,
+            location=agent.location if agent else decision.selected_compute_tier,
+            estimated_duration_ms=decision.estimated_latency_ms,
+            estimated_cost=decision.estimated_cost,
+        )

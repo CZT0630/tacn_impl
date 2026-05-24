@@ -2,7 +2,7 @@
 
 > 目标：让代码向 README 描述的 TACN 核心能力靠拢（三控制面、双闭环、MTCC 联合编排）
 > 创建日期：2026-05-24
-> 状态：阶段一、二、三已完成，后续阶段待执行
+> 状态：阶段一、二、三、四已完成，后续阶段待执行
 
 ---
 
@@ -1705,11 +1705,11 @@ class TACNSystem:
 
 #### 4.4 验证标准
 
-- [ ] `MTCCOrchestrator.orchestrate_subtask()` 返回包含 agent/model/tool/context/privacy_action 的完整决策
-- [ ] `orchestrate_graph()` 能处理带依赖的子任务图
-- [ ] 三个控制面能独立运行并返回状态信息
-- [ ] `TACNSystem` 在传入完整 Registry 时使用 MTCC，否则回退到简单 Router
-- [ ] MTCC 编排结果中的 `privacy_action` 对 RESTRICTED 任务返回 "local_only"
+- [x] `MTCCOrchestrator.orchestrate_subtask()` 返回包含 agent/model/tool/context/privacy_action 的完整决策
+- [x] `orchestrate_graph()` 能处理带依赖的子任务图
+- [x] 三个控制面能独立运行并返回状态信息
+- [x] `TACNSystem` 在传入完整 Registry 时使用 MTCC，否则回退到简单 Router
+- [x] MTCC 编排结果中的 `privacy_action` 对 RESTRICTED 任务返回 "local_only"
 
 ---
 
