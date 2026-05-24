@@ -158,6 +158,21 @@ class AgentProfile(BaseModel):
     cost_per_invocation: float = Field(0.01, ge=0.0)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    # ---- 模型能力 ----
+    supported_models: list[str] = Field(default_factory=list)
+    default_model: str = ""
+
+    # ---- 上下文能力 ----
+    context_sources: list[str] = Field(default_factory=list)
+    context_capacity_kb: float = 0.0
+
+    # ---- 可靠性指标 (由反馈回路更新) ----
+    reliability_score: float = Field(1.0, ge=0.0, le=1.0)
+    observed_latency_ms: float = 0.0
+    tool_success_rate: float = Field(1.0, ge=0.0, le=1.0)
+    context_hit_rate: float = Field(0.0, ge=0.0, le=1.0)
+    routing_score: float = Field(0.5, ge=0.0, le=1.0)
+
     def has_capability(self, cap_type: CapabilityType) -> bool:
         """检查是否具有某项能力."""
         return any(c.capability_type == cap_type for c in self.capabilities)

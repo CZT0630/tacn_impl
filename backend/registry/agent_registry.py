@@ -126,6 +126,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=2,
             privacy_level=PrivacyLevel.CONFIDENTIAL,
             avg_latency_ms=30,
+            supported_models=["lightweight_sensing", "vision_model"],
+            default_model="lightweight_sensing",
+            context_sources=["user_profile", "location_history"],
+            context_capacity_kb=512,
         ),
         AgentProfile(
             name="camera_agent_001",
@@ -140,6 +144,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=1,
             privacy_level=PrivacyLevel.INTERNAL,
             avg_latency_ms=20,
+            supported_models=["vision_model", "lightweight_sensing"],
+            default_model="vision_model",
+            context_sources=["sensor_history"],
+            context_capacity_kb=256,
         ),
         AgentProfile(
             name="sensor_agent_001",
@@ -153,6 +161,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=3,
             privacy_level=PrivacyLevel.INTERNAL,
             avg_latency_ms=5,
+            supported_models=["lightweight_sensing"],
+            default_model="lightweight_sensing",
+            context_sources=["sensor_history"],
+            context_capacity_kb=128,
         ),
     ]
 
@@ -173,6 +185,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=1,
             privacy_level=PrivacyLevel.INTERNAL,
             avg_latency_ms=50,
+            supported_models=["vision_model", "lightweight_sensing"],
+            default_model="vision_model",
+            context_sources=["sensor_history", "maintenance_records"],
+            context_capacity_kb=1024,
         ),
     ]
 
@@ -192,6 +208,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=5,
             privacy_level=PrivacyLevel.CONFIDENTIAL,
             avg_latency_ms=100,
+            supported_models=["vision_model", "rag_model"],
+            default_model="vision_model",
+            context_sources=["sensor_history", "maintenance_records", "network_state"],
+            context_capacity_kb=4096,
         ),
         AgentProfile(
             name="edge_rag_agent",
@@ -206,6 +226,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=3,
             privacy_level=PrivacyLevel.CONFIDENTIAL,
             avg_latency_ms=150,
+            supported_models=["rag_model"],
+            default_model="rag_model",
+            context_sources=["local_knowledge_base", "maintenance_records"],
+            context_capacity_kb=8192,
         ),
         AgentProfile(
             name="edge_orchestrator",
@@ -221,6 +245,10 @@ def create_default_registry() -> AgentRegistry:
             max_concurrent_tasks=10,
             privacy_level=PrivacyLevel.INTERNAL,
             avg_latency_ms=50,
+            supported_models=["cloud_llm", "rag_model"],
+            default_model="rag_model",
+            context_sources=["network_state"],
+            context_capacity_kb=2048,
         ),
     ]
 
@@ -242,6 +270,10 @@ def create_default_registry() -> AgentRegistry:
             privacy_level=PrivacyLevel.RESTRICTED,
             cost_per_invocation=0.05,
             avg_latency_ms=400,
+            supported_models=["cloud_llm", "rag_model", "vision_model"],
+            default_model="cloud_llm",
+            context_sources=["global_knowledge_base", "security_policies"],
+            context_capacity_kb=32768,
         ),
         AgentProfile(
             name="cloud_security_agent",
@@ -257,6 +289,10 @@ def create_default_registry() -> AgentRegistry:
             privacy_level=PrivacyLevel.RESTRICTED,
             cost_per_invocation=0.03,
             avg_latency_ms=500,
+            supported_models=["cloud_llm"],
+            default_model="cloud_llm",
+            context_sources=["security_policies"],
+            context_capacity_kb=16384,
         ),
     ]
 

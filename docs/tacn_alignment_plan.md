@@ -2,7 +2,7 @@
 
 > 目标：让代码向 README 描述的 TACN 核心能力靠拢（三控制面、双闭环、MTCC 联合编排）
 > 创建日期：2026-05-24
-> 状态：阶段一、二已完成，后续阶段待执行
+> 状态：阶段一、二、三已完成，后续阶段待执行
 
 ---
 
@@ -1161,14 +1161,14 @@ OrchestrationEngine(registry, runtime: AgentRuntime)
 
 #### 3.7 验证标准
 
-- [ ] `ModelRegistry` 能注册/查询/按任务类型筛选模型
-- [ ] `ToolRegistry` 能注册/查询/按能力筛选工具
-- [ ] `ContextRegistry` 能注册/查询/按位置和隐私级别筛选上下文源
-- [ ] `AgentProfile` 包含完整的模型/工具/上下文/反馈字段
-- [ ] `create_default_registry()` 返回增强后的 Agent 列表
-- [ ] `AgentRuntime` 接口定义完成（execute / execute_plan / get_capabilities）
-- [ ] `MockAgentRuntime` 包装现有 AgentManager，所有 demo 脚本通过
-- [ ] 编排层可选依赖 `AgentRuntime` 接口（阶段四改造，此阶段仅定义接口）
+- [x] `ModelRegistry` 能注册/查询/按任务类型筛选模型
+- [x] `ToolRegistry` 能注册/查询/按能力筛选工具
+- [x] `ContextRegistry` 能注册/查询/按位置和隐私级别筛选上下文源
+- [x] `AgentProfile` 包含完整的模型/工具/上下文/反馈字段
+- [x] `create_default_registry()` 返回增强后的 Agent 列表
+- [x] `AgentRuntime` 接口定义完成（execute / execute_plan / get_capabilities）
+- [x] `MockAgentRuntime` 包装现有 AgentManager，所有 demo 脚本通过
+- [x] 编排层可选依赖 `AgentRuntime` 接口（阶段四改造，此阶段仅定义接口）
 
 ---
 
