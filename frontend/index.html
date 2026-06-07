@@ -11,21 +11,47 @@
     <div class="container">
         <!-- 侧边栏 -->
         <aside class="sidebar">
-            <h2>TACN</h2>
-            <p class="subtitle">终端智能体算力网络</p>
+            <div class="sidebar-header">
+                <h2>TACN</h2>
+                <p class="subtitle">终端智能体算力网络</p>
+            </div>
             <nav>
-                <a href="#" class="nav-item active" data-section="task">任务处理</a>
-                <a href="#" class="nav-item" data-section="agents">智能体管理</a>
-                <a href="#" class="nav-item" data-section="experiment">对比实验</a>
-                <a href="#" class="nav-item" data-section="results">实验结果</a>
+                <a href="#" class="nav-item active" data-section="task">
+                    <span class="nav-icon">📋</span> 任务处理
+                </a>
+                <a href="#" class="nav-item" data-section="agents">
+                    <span class="nav-icon">🤖</span> 智能体管理
+                </a>
+                <a href="#" class="nav-item" data-section="experiment">
+                    <span class="nav-icon">📊</span> 对比实验
+                </a>
+                <a href="#" class="nav-item" data-section="results">
+                    <span class="nav-icon">📈</span> 实验结果
+                </a>
             </nav>
+            <div class="sidebar-footer">
+                <p>Agent Layer v0.2</p>
+            </div>
         </aside>
 
         <!-- 主内容区 -->
         <main class="main-content">
-            <!-- 任务处理 -->
+
+            <!-- ==================== 任务处理 ==================== -->
             <section id="task-section" class="section active">
                 <h1>任务处理</h1>
+
+                <!-- 快捷场景 -->
+                <div class="scenarios-bar">
+                    <span class="scenarios-label">快捷场景:</span>
+                    <button class="scenario-btn" data-text="实验楼3层烟雾传感器检测到浓度异常升高，温度也在快速上升，请立即判断是否需要触发消防告警并通知相关人员">🔥 火灾应急</button>
+                    <button class="scenario-btn" data-text="请对A区的空调机组和配电柜进行全面巡检，检查温度是否异常，并检索上次维护记录">🔍 设备巡检</button>
+                    <button class="scenario-btn" data-text="东门摄像头检测到一名未佩戴工牌的人员在非工作时间进入园区，请分析行为并通知安保">🛡️ 安防监控</button>
+                    <button class="scenario-btn" data-text="B区冷却塔近3天振动数据持续上升，请分析趋势并预测是否需要提前维护">🔧 预测维护</button>
+                    <button class="scenario-btn" data-text="明天下午2点在3楼会议室开项目评审会，请帮我检查日程冲突、预订会议室并通知所有参会人">📋 会议助手</button>
+                </div>
+
+                <!-- 输入区 -->
                 <div class="input-group">
                     <textarea id="task-input" placeholder="请输入任务请求，例如：实验楼烟雾传感器报警，请结合摄像头画面判断是否触发消防告警" rows="3"></textarea>
                     <div class="button-group">
@@ -33,34 +59,40 @@
                         <button id="execute-btn" class="btn secondary" disabled>执行任务</button>
                     </div>
                 </div>
+
+                <!-- 执行计划 -->
                 <div id="task-result" class="result-panel hidden">
                     <h3>执行计划</h3>
                     <div id="plan-info"></div>
-                    <h4>子任务</h4>
-                    <div id="subtasks-list"></div>
+
+                    <h4>DAG 子任务图</h4>
+                    <div id="dag-container" class="dag-container"></div>
+
                     <h4>智能体分配</h4>
                     <div id="assignments-list"></div>
                 </div>
+
+                <!-- 执行结果 -->
                 <div id="execution-result" class="result-panel hidden">
                     <h3>执行结果</h3>
                     <div id="result-info"></div>
                 </div>
             </section>
 
-            <!-- 智能体管理 -->
+            <!-- ==================== 智能体管理 ==================== -->
             <section id="agents-section" class="section">
                 <h1>智能体管理</h1>
                 <button id="refresh-agents-btn" class="btn primary">刷新</button>
-                <div id="agents-stats" class="stats-panel"></div>
+                <div id="agents-stats" class="stats-row"></div>
                 <div id="agents-list" class="agents-grid"></div>
             </section>
 
-            <!-- 对比实验 -->
+            <!-- ==================== 对比实验 ==================== -->
             <section id="experiment-section" class="section">
                 <h1>对比实验</h1>
                 <div class="experiment-config">
                     <div class="form-group">
-                        <label>实验场景:</label>
+                        <label>实验场景</label>
                         <select id="scenario-select">
                             <option value="mixed">混合场景</option>
                             <option value="emergency_response">应急响应</option>
@@ -70,31 +102,26 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>任务数量:</label>
+                        <label>任务数量</label>
                         <input type="number" id="num-tasks" value="50" min="10" max="200">
                     </div>
                     <button id="run-experiment-btn" class="btn primary">运行实验</button>
                 </div>
                 <div id="experiment-status" class="hidden">
-                    <p>实验运行中...</p>
+                    <p>⏳ 实验运行中，请稍候...</p>
                 </div>
             </section>
 
-            <!-- 实验结果 -->
+            <!-- ==================== 实验结果 ==================== -->
             <section id="results-section" class="section">
                 <h1>实验结果</h1>
-                <div id="experiment-selector" class="hidden">
-                    <select id="experiment-select">
-                        <option value="">选择实验</option>
-                    </select>
-                </div>
                 <div id="charts-container" class="charts-grid">
                     <div class="chart-box">
                         <h3>任务成功率</h3>
                         <canvas id="successRateChart"></canvas>
                     </div>
                     <div class="chart-box">
-                        <h3>P95延迟 (ms)</h3>
+                        <h3>P95 延迟 (ms)</h3>
                         <canvas id="latencyChart"></canvas>
                     </div>
                     <div class="chart-box">
@@ -107,6 +134,7 @@
                     </div>
                 </div>
             </section>
+
         </main>
     </div>
 

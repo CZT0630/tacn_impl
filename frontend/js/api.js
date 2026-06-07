@@ -1,27 +1,28 @@
 /**
- * TACN API调用封装
+ * TACN API 调用封装
  */
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 const api = {
     /**
-     * 处理任务请求
+     * 意图解析 + 子任务分解 + 路由
      */
-    async processRequest(request, deadlineMs = 30000) {
+    async processRequest(request, deadlineMs = 60000) {
         const response = await fetch(`${API_BASE}/tasks/process`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, deadline_ms: deadlineMs })
         });
         if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || response.statusText);
         }
         return response.json();
     },
 
     /**
-     * 执行任务
+     * 执行已规划的任务
      */
     async executeTask(taskId) {
         const response = await fetch(`${API_BASE}/tasks/execute`, {
@@ -30,7 +31,8 @@ const api = {
             body: JSON.stringify({ task_id: taskId })
         });
         if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || response.statusText);
         }
         return response.json();
     },
@@ -40,39 +42,20 @@ const api = {
      */
     async getAgents() {
         const response = await fetch(`${API_BASE}/agents`);
-        if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(response.statusText);
         return response.json();
     },
 
     /**
-     * 运行实验
+     * 运行对比实验
      */
     async runExperiment(scenario, numTasks, methods) {
         const response = await fetch(`${API_BASE}/experiments/run`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                scenario,
-                num_tasks: numTasks,
-                methods
-            })
+            body: JSON.stringify({ scenario, num_tasks: numTasks, methods })
         });
-        if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
-        }
-        return response.json();
-    },
-
-    /**
-     * 获取实验结果
-     */
-    async getExperiment(experimentId) {
-        const response = await fetch(`${API_BASE}/experiments/${experimentId}`);
-        if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(response.statusText);
         return response.json();
     },
 
@@ -81,9 +64,7 @@ const api = {
      */
     async getExperimentChart(experimentId) {
         const response = await fetch(`${API_BASE}/experiments/${experimentId}/chart`);
-        if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(response.statusText);
         return response.json();
     }
 };

@@ -1,435 +1,446 @@
-/* TACN前端样式 */
+/* TACN 前端样式 */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f2f5;
     color: #333;
 }
 
-.container {
-    display: flex;
-    min-height: 100vh;
-}
+.container { display: flex; min-height: 100vh; }
 
-/* 侧边栏 */
+/* ==================== 侧边栏 ==================== */
+
 .sidebar {
-    width: 240px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    width: 220px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
     color: white;
-    padding: 20px;
-}
-
-.sidebar h2 {
-    font-size: 24px;
-    margin-bottom: 5px;
-}
-
-.sidebar .subtitle {
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 30px;
-}
-
-.sidebar nav {
+    padding: 20px 15px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
 }
+
+.sidebar-header { margin-bottom: 30px; }
+.sidebar h2 { font-size: 22px; letter-spacing: 2px; }
+.sidebar .subtitle { font-size: 11px; color: #7a8ba0; margin-top: 4px; }
+
+.sidebar nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 
 .nav-item {
-    color: white;
+    color: #b0bec5;
     text-decoration: none;
-    padding: 12px 15px;
+    padding: 10px 12px;
     border-radius: 8px;
-    transition: background 0.3s;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+.nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+.nav-item.active { background: rgba(74,144,217,0.3); color: white; }
+.nav-icon { font-size: 16px; }
+
+.sidebar-footer {
+    font-size: 11px;
+    color: #546e7a;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.08);
 }
 
-.nav-item.active {
-    background: rgba(255, 255, 255, 0.2);
+/* ==================== 主内容区 ==================== */
+
+.main-content { flex: 1; padding: 30px; overflow-y: auto; }
+.section { display: none; }
+.section.active { display: block; }
+
+h1 { font-size: 24px; margin-bottom: 20px; color: #1a1a2e; }
+h3 { font-size: 16px; margin: 20px 0 10px; color: #333; }
+h4 { font-size: 14px; margin: 15px 0 8px; color: #555; }
+
+/* ==================== 快捷场景 ==================== */
+
+.scenarios-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
-/* 主内容区 */
-.main-content {
-    flex: 1;
-    padding: 30px;
-    overflow-y: auto;
+.scenarios-label { font-size: 13px; color: #888; }
+
+.scenario-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.section {
-    display: none;
-}
+.scenario-btn:hover { border-color: #4a90d9; background: #f0f7ff; }
 
-.section.active {
-    display: block;
-}
+/* ==================== 输入区 ==================== */
 
-h1 {
-    font-size: 28px;
-    margin-bottom: 20px;
-    color: #1a1a2e;
-}
-
-h3 {
-    font-size: 18px;
-    margin: 20px 0 10px;
-    color: #333;
-}
-
-h4 {
-    font-size: 16px;
-    margin: 15px 0 10px;
-    color: #555;
-}
-
-/* 输入组 */
 .input-group {
     background: white;
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 textarea {
     width: 100%;
-    padding: 15px;
-    border: 1px solid #ddd;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-size: 14px;
     resize: vertical;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
+    font-family: inherit;
 }
 
-textarea:focus {
-    outline: none;
-    border-color: #4a90d9;
-}
+textarea:focus { outline: none; border-color: #4a90d9; }
 
-.button-group {
-    display: flex;
-    gap: 10px;
-}
+.button-group { display: flex; gap: 10px; }
 
 .btn {
-    padding: 10px 20px;
+    padding: 10px 24px;
     border: none;
     border-radius: 8px;
     font-size: 14px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
-.btn.primary {
-    background: #4a90d9;
-    color: white;
-}
+.btn.primary { background: #4a90d9; color: white; }
+.btn.primary:hover { background: #357abd; }
+.btn.primary:disabled { background: #c0c0c0; cursor: not-allowed; }
 
-.btn.primary:hover {
-    background: #357abd;
-}
+.btn.secondary { background: #5c636a; color: white; }
+.btn.secondary:hover { background: #4a5057; }
+.btn.secondary:disabled { background: #c0c0c0; cursor: not-allowed; }
 
-.btn.primary:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
+/* ==================== 统计行 ==================== */
 
-.btn.secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn.secondary:hover {
-    background: #5a6268;
-}
-
-.btn.secondary:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
-/* 结果面板 */
-.result-panel {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-top: 20px;
-}
-
-.result-panel.hidden {
-    display: none;
-}
-
-/* 统计面板 */
-.stats-panel {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
+.stats-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
 }
 
-.stat-item {
+.stat-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
     text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-.stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #4a90d9;
-}
+.stat-value { font-size: 20px; font-weight: bold; color: #4a90d9; }
+.stat-label { font-size: 11px; color: #999; margin-top: 4px; }
 
-.stat-label {
-    font-size: 12px;
-    color: #888;
-    margin-top: 5px;
-}
+.status-success { color: #4caf50 !important; }
+.status-fail { color: #f44336 !important; }
 
-/* 智能体网格 */
-.agents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
+/* ==================== 计划元数据 ==================== */
 
-.agent-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
+.plan-meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 
-.agent-card h4 {
-    margin: 0 0 10px;
-    color: #1a1a2e;
-}
-
-.agent-location {
+.meta-tag {
     display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    margin-bottom: 10px;
-}
-
-.agent-location.terminal {
-    background: #e3f2fd;
-    color: #1976d2;
-}
-
-.agent-location.peer {
-    background: #f3e5f5;
-    color: #7b1fa2;
-}
-
-.agent-location.edge {
-    background: #e8f5e9;
-    color: #388e3c;
-}
-
-.agent-location.cloud {
-    background: #fff3e0;
-    color: #f57c00;
-}
-
-.capability-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
-}
-
-.capability-tag {
+    padding: 3px 10px;
     background: #f0f0f0;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-}
-
-/* 实验配置 */
-.experiment-config {
-    background: white;
-    padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    display: flex;
-    gap: 20px;
-    align-items: flex-end;
+    font-size: 12px;
+    color: #666;
 }
 
-.form-group {
+.request-text {
+    font-size: 13px;
+    color: #555;
+    margin-top: 10px;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 6px;
+}
+
+/* ==================== DAG 可视化 ==================== */
+
+.dag-container {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    overflow-x: auto;
+}
+
+.dag-stages { display: flex; align-items: center; gap: 0; }
+
+.dag-stage {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    min-width: 120px;
 }
 
-.form-group label {
-    font-size: 14px;
-    color: #555;
+.stage-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 8px;
+    font-weight: bold;
 }
 
-.form-group select,
-.form-group input {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-}
+.stage-nodes { display: flex; flex-direction: column; gap: 6px; }
 
-#experiment-status {
-    margin-top: 20px;
-    padding: 15px;
-    background: #e3f2fd;
+.dag-node {
+    padding: 8px 12px;
     border-radius: 8px;
     text-align: center;
+    min-width: 100px;
+    border: 2px solid;
 }
 
-#experiment-status.hidden {
-    display: none;
+.dag-node.terminal { background: #e3f2fd; border-color: #90caf9; }
+.dag-node.peer { background: #f3e5f5; border-color: #ce93d8; }
+.dag-node.edge { background: #e8f5e9; border-color: #a5d6a7; }
+.dag-node.cloud { background: #fff3e0; border-color: #ffcc80; }
+
+.node-name { font-size: 12px; font-weight: bold; color: #333; }
+.node-loc { font-size: 10px; color: #888; margin-top: 2px; }
+
+.dag-arrow {
+    font-size: 20px;
+    color: #bbb;
+    padding: 0 8px;
+    align-self: center;
 }
 
-/* 图表网格 */
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    margin-top: 20px;
-}
+/* ==================== 分配表 ==================== */
 
-.chart-box {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.chart-box h3 {
-    margin: 0 0 15px;
-    font-size: 16px;
-    color: #333;
-}
-
-canvas {
-    max-height: 300px;
-}
-
-/* 子任务列表 */
-.subtask-item {
+.assignment-row {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 8px 12px;
     background: #f9f9f9;
     border-radius: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
 }
 
-.subtask-index {
-    width: 30px;
-    height: 30px;
+.asgn-index {
+    width: 24px;
+    height: 24px;
     background: #4a90d9;
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 15px;
-    font-size: 14px;
-}
-
-.subtask-info {
-    flex: 1;
-}
-
-.subtask-name {
-    font-weight: bold;
-    color: #333;
-}
-
-.subtask-desc {
     font-size: 12px;
-    color: #888;
-    margin-top: 3px;
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
-/* 分配列表 */
-.assignment-item {
+.asgn-name { font-weight: bold; color: #333; flex: 1; }
+.asgn-arrow { color: #4a90d9; margin: 0 8px; }
+.asgn-agent { color: #666; font-family: monospace; font-size: 12px; }
+
+.location-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+.location-badge.terminal { background: #e3f2fd; color: #1976d2; }
+.location-badge.peer { background: #f3e5f5; color: #7b1fa2; }
+.location-badge.edge { background: #e8f5e9; color: #388e3c; }
+.location-badge.cloud { background: #fff3e0; color: #f57c00; }
+
+/* ==================== 结果面板 ==================== */
+
+.result-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-top: 15px;
+}
+
+.result-panel.hidden { display: none; }
+
+/* ==================== 子任务结果 ==================== */
+
+.subtask-results { display: flex; flex-direction: column; gap: 10px; }
+
+.result-card {
+    border-radius: 10px;
+    padding: 12px 15px;
+    border-left: 4px solid;
+}
+
+.result-card.success { background: #f1f8e9; border-color: #66bb6a; }
+.result-card.fail { background: #fce4ec; border-color: #ef5350; }
+
+.result-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 8px;
+    gap: 8px;
     margin-bottom: 8px;
 }
 
-.assignment-subtask {
-    font-weight: bold;
-    color: #333;
-}
+.result-icon { font-size: 16px; }
+.result-agent { font-weight: bold; font-size: 13px; color: #333; }
+.result-latency { font-size: 12px; color: #999; margin-left: auto; }
 
-.assignment-arrow {
-    color: #4a90d9;
-    margin: 0 10px;
-}
-
-.assignment-agent {
-    color: #666;
-}
-
-.assignment-location {
+.result-output {
     font-size: 12px;
-    color: #888;
-    margin-left: 5px;
+    color: #555;
+    line-height: 1.6;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 6px;
 }
 
-/* 隐藏类 */
-.hidden {
-    display: none;
+.result-output strong { color: #333; }
+
+.result-error {
+    font-size: 12px;
+    color: #c62828;
+    margin-top: 6px;
+    padding: 6px;
+    background: rgba(244,67,54,0.08);
+    border-radius: 4px;
 }
 
-/* 响应式 */
+/* ==================== 智能体 ==================== */
+
+.agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.agent-card {
+    background: white;
+    padding: 16px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.agent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.agent-header h4 { margin: 0; font-size: 14px; }
+.agent-desc { font-size: 12px; color: #888; margin-bottom: 8px; }
+
+.agent-metrics {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #777;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.agent-tools {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.agent-tools code {
+    background: #f0f0f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.capability-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.capability-tag {
+    background: #e8eaf6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #3f51b5;
+}
+
+/* ==================== 实验 ==================== */
+
+.experiment-config {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 13px; color: #666; }
+
+.form-group select,
+.form-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#experiment-status {
+    margin-top: 15px;
+    padding: 12px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+}
+
+#experiment-status.hidden { display: none; }
+
+/* ==================== 图表 ==================== */
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.chart-box {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.chart-box h3 { margin: 0 0 10px; font-size: 14px; }
+canvas { max-height: 280px; }
+
+/* ==================== 工具类 ==================== */
+
+.hidden { display: none; }
+.text-muted { color: #999; font-size: 13px; }
+
+/* ==================== 响应式 ==================== */
+
 @media (max-width: 768px) {
-    .container {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        width: 100%;
-        padding: 15px;
-    }
-
-    .sidebar nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    .nav-item {
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-
-    .stats-panel {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .charts-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .experiment-config {
-        flex-direction: column;
-        align-items: stretch;
-    }
+    .container { flex-direction: column; }
+    .sidebar { width: 100%; padding: 10px; }
+    .sidebar nav { flex-direction: row; flex-wrap: wrap; }
+    .nav-item { padding: 6px 10px; font-size: 13px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .experiment-config { flex-direction: column; align-items: stretch; }
+    .dag-stages { flex-direction: column; }
+    .dag-arrow { transform: rotate(90deg); }
 }
