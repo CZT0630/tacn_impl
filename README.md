@@ -1,493 +1,1226 @@
-# TACN-Proto: Terminal Agent Computing Network
+# TACN：从任务卸载到网络级智能体编排
 
-> 面向未来 5G-A/6G 的终端智能体算力网络原型
-> 从资源驱动的任务卸载，走向意图驱动的智能体能力编排
+> **TACN，Terminal Agent Computing Network，终端智能体算力网络**，是面向 5G-A/6G 智能网络的一种通用网络化智能服务架构。它以复杂意图为输入，以智能体能力为调度对象，以模型—工具—算力—上下文联合编排为核心机制，实现终端、边缘和云端智能体的网络化协同服务。
 
-TACN-Proto 是一个面向论文实验和体系验证的轻量级原型，用于验证 **TACN（Terminal Agent Computing Network，终端智能体算力网络）** 的核心思想：将终端、边缘和云端组织为可感知、可发现、可调度、可协作的智能体网络，并围绕复杂用户意图联合编排智能体、模型、工具、上下文、算力资源和网络资源。
+---
 
-TACN 不是智慧工厂、智慧园区或智慧医院的专用系统。这些只是可用于实验和展示的应用实例。TACN 的核心定位是一个通用的 agent-native computing fabric：让未来网络从“连接设备、调度算力”的系统，升级为“理解意图、编排能力、协同智能体”的系统。
+## 1. TACN 的提出背景
 
-项目概念基准见 [`docs/tacn_project_outline.md`](docs/tacn_project_outline.md)，实验定位见 [`docs/experiment_positioning.md`](docs/experiment_positioning.md)。修改代码前应先阅读这两份文档和相关实现文件，确保变化仍服务于 TACN 主链路：
+随着大模型、端侧 AI、边缘计算、智能终端和 5G-A/6G 网络的发展，终端设备正在从传统的**数据采集设备**、**任务发起设备**和**算力节点**，逐步演化为具备感知、理解、推理、工具调用、上下文访问和协作执行能力的**终端智能体**。
+
+传统网络主要解决的是连接问题和资源调度问题。例如：
+
+- 如何连接终端设备；
+- 如何传输数据；
+- 如何将任务卸载到边缘或云端；
+- 如何调度 CPU、GPU、带宽和存储资源；
+- 如何降低任务执行时延和能耗。
+
+但是，未来智能网络面对的任务形态正在发生变化。用户或终端发起的任务不再只是简单的计算任务，而往往是一个包含复杂意图、多个子任务、多种工具、多类上下文和多智能体协作关系的复杂服务请求。
+
+传统 MEC、CPN 和 Edge AI 系统通常把任务抽象为：
 
 ```text
-complex intent
--> intent parsing
--> subtask graph
--> agent capability matching
--> model-tool-compute-context orchestration
--> execution
+数据量 + 计算量 + 时延约束 + 资源需求
 ```
 
-## 1. TACN 项目定位
+而终端智能体时代的复杂任务更接近：
 
-TACN 的目标不是简单判断“任务应该在本地、边缘还是云端执行”，而是面向未来网络中的复杂智能服务，研究如何将用户意图解析为结构化任务，并在终端、邻近终端、边缘和云端之间联合编排：
-
-- 智能体；
-- 模型；
-- 工具；
-- 上下文；
-- 算力资源；
-- 网络资源；
-- 隐私与安全约束。
-
-TACN 的核心问题是：
-
-> 面向复杂用户意图，如何通过终端智能体、边缘智能体和云端智能体的协同，完成意图解析、任务拆解、能力匹配、联合编排和反馈优化。
-
-因此，TACN 的本质是：
-
-> 从资源驱动的任务卸载网络，升级为意图驱动的智能体能力编排网络。
-
-## 2. 背景与动机
-
-传统网络中的终端主要承担数据采集、业务请求发起、通信接入和结果接收。复杂推理、全局决策和业务编排通常由边缘或云端完成，终端被视为被动设备或任务源。
-
-随着端侧计算、边缘智能、轻量化大模型、多模态感知和智能体技术的发展，手机、摄像头、传感器、机器人、AR 眼镜、车载终端、可穿戴设备等终端正在逐渐具备：
-
-- 环境感知能力；
-- 本地数据处理能力；
-- 轻量模型推理能力；
-- 局部任务决策能力；
-- 工具调用能力；
-- 上下文管理能力；
-- 隐私过滤能力；
-- 与邻近终端协作的能力。
-
-这意味着，终端正在从传统 device 演进为具备一定自治能力的 **Terminal Agent**。
-
-与此同时，网络承载的任务也不再只是单一计算任务。未来智能服务通常包含意图理解、任务拆解、多模型协同、工具调用、上下文检索、多智能体协作、隐私约束、安全约束、实时性约束和用户反馈优化。传统任务卸载、资源调度和边缘推理机制很难完整表达这类服务的执行过程。
-
-TACN 正是在这一背景下提出：它希望将终端、边缘和云端的智能体能力组织成一个可感知、可调度、可协作、可反馈优化的新型算力网络。
-
-## 3. TACN 核心定义
-
-TACN 是一种以终端智能体为原生主体的智能化算力网络。它将分布式终端、边缘节点和云端平台抽象为可管理、可发现、可调度的智能体集合，并通过意图解析、任务图生成、智能体能力匹配和模型-工具-算力-上下文联合编排，实现复杂智能服务的协同执行。
-
-TACN 可以抽象为：
-
-```math
-\mathcal{N}^{\mathrm{TACN}}
-=
-\left(
-\mathcal{A},
-\mathcal{M},
-\mathcal{U},
-\mathcal{C},
-\mathcal{R},
-\mathcal{I}
-\right)
+```text
+用户意图 + 子任务依赖 + 智能体能力需求 + 模型需求 + 工具需求 + 上下文需求 + 隐私约束 + 截止期约束 + 多智能体协作关系
 ```
 
-其中，$\mathcal{A}$ 表示智能体集合，$\mathcal{M}$ 表示模型集合，$\mathcal{U}$ 表示工具集合，$\mathcal{C}$ 表示上下文集合，$\mathcal{R}$ 表示资源状态集合，$\mathcal{I}$ 表示用户意图或任务集合。
+因此，未来网络不能只解决"任务在哪里计算"的问题，还需要进一步解决：
 
-一个 TACN 系统主要由以下要素组成：
+> **复杂用户意图如何被理解、拆解、匹配、编排，并由分布式终端、边缘和云端智能体协同完成。**
 
-| 要素 | 含义 |
-| --- | --- |
-| Terminal Agent | 具备感知、推理、工具调用和协作能力的终端智能体 |
-| Edge Agent | 部署在边缘侧，负责区域级推理、检索、融合和编排的智能体 |
-| Cloud Agent | 部署在云端，负责复杂推理、长上下文处理和全局知识服务的智能体 |
-| Model | 支撑任务推理的模型，包括轻量模型、视觉模型、RAG 模型和大模型 |
-| Tool | 可被智能体调用的外部工具、API、设备控制接口或业务系统 |
-| Context | 与任务相关的用户上下文、环境上下文、设备状态、历史记录和知识库 |
-| Compute | 终端、邻近终端、边缘和云端提供的计算资源 |
-| Network | 支撑智能体协作的通信、路由、切片和连接能力 |
-| Policy | 资源调度、隐私保护、安全控制和服务优化策略 |
+这正是 **Terminal Agent Computing Network，TACN，终端智能体算力网络** 的提出背景。
 
-TACN 的核心不是单一模块，而是一种系统范式：将终端设备提升为终端智能体，并通过网络化方式组织智能体能力，使未来网络能够围绕复杂意图进行协同感知、协同推理、协同执行和持续优化。
+---
 
-## 4. 核心范式转变
+## 2. 现有 Agent 已经具备内部执行流程
 
-TACN 相比传统端侧算力网络，主要体现三类转变。
+在定义 TACN 之前，必须先明确一个重要事实：当前主流 Agent 系统已经不是简单的大模型问答接口，而是具备内部执行流程的 Agent Runtime。
 
-| 转变 | 传统网络 | TACN |
-| --- | --- | --- |
-| 设备中心 -> 智能体中心 | 终端主要负责数据采集和通信接入 | 终端参与任务理解、局部推理、上下文维护和协作执行 |
-| 资源调度 -> 能力编排 | 调度 CPU、GPU、内存、带宽和存储 | 调度视觉理解、传感器分析、RAG 检索、安全推理、工具调用、多智能体协作等能力 |
-| 任务卸载 -> 意图编排 | `task -> local / edge / cloud` | `complex intent -> intent parsing -> subtask graph -> agent capability matching -> model-tool-compute-context orchestration -> collaborative execution -> feedback optimization` |
+例如，OpenAI Agents SDK 将 Agent 定义为带有 instructions、tools 以及 handoffs、guardrails、structured outputs 等运行时行为的大语言模型；其工具机制允许 Agent 获取数据、运行代码、调用外部 API，甚至使用计算机等外部能力。OpenAI Agents SDK 还支持 handoff，即一个 Agent 可以把任务委派给另一个专门 Agent；其 tracing 机制会记录 LLM generation、tool call、handoff、guardrail 等运行事件。
 
-TACN 的调度逻辑不是简单选择“哪个节点资源最多”，而是选择“哪些智能体、模型、工具和上下文最适合协作完成当前意图”。
+Claude Agent SDK 也具有类似定位。Anthropic 文档说明，Claude Agent SDK 提供支撑 Claude Code 的 tools、agent loop 和 context management，使 Agent 能够读取文件、运行命令、搜索 Web、编辑代码等。Claude 的工具调用机制也支持将 Claude 连接到外部工具和 API，由 Claude 根据用户请求和工具描述决定何时调用工具。
+
+因此，现代 Agent 通常已经具备如下微观执行流程：
+
+```text
+User Request
+    |
+Intent Understanding
+    |
+Task Planning
+    |
+Tool / Memory / Context Selection
+    |
+Action Execution
+    |
+Observation
+    |
+Reflection / Replanning
+    |
+Final Response or Handoff
+```
+
+这个流程可以称为：
+
+> **Micro-agent workflow，即单个智能体内部工作流。**
+
+它关注的是：
+
+- 单个 Agent 如何理解任务；
+- 单个 Agent 如何规划步骤；
+- 单个 Agent 如何调用工具；
+- 单个 Agent 如何读取上下文；
+- 单个 Agent 如何根据工具返回结果继续推理；
+- 单个 Agent 如何完成最终输出或 handoff。
+
+因此，TACN 不能被简单表述为"设计一个会规划、会调用工具、会执行任务的 Agent"。这一部分已经是现有 Agent 框架的重要能力。
+
+TACN 应该站在更高层级，关注的是：
+
+> **当大量异构 Agent 分布在终端、边缘和云端之后，网络如何发现、组织、匹配、调度和协同这些 Agent。**
+
+---
+
+## 3. TACN 的基本定义
+
+**Terminal Agent Computing Network，TACN，终端智能体算力网络**，是一种面向 5G-A/6G 智能网络的**通用网络化智能服务架构**。
+
+它将手机、摄像头、机器人、传感器、AR 眼镜、车载终端、工业设备、可穿戴设备、无人机等终端，从传统的数据源、任务源或算力节点，升级为具备感知、理解、推理、工具调用、上下文访问和协作执行能力的**终端智能体**。
+
+TACN 通过网络级控制平面对终端智能体、边缘智能体和云端智能体进行统一发现、匹配、调度和协同，从而在时延、隐私、成本和资源约束下完成复杂用户意图。
+
+更简洁地说：
+
+> **TACN 不是简单决定任务在本地、边缘还是云端执行，而是围绕复杂用户意图，联合编排智能体、模型、工具、算力、上下文和网络资源，使端—边—云分布式智能体能够协同完成复杂任务。**
+
+传统算力网络关注：
+
+```text
+任务应该在哪里计算？
+```
+
+TACN 进一步关注：
+
+```text
+用户到底想完成什么？
+这个意图需要哪些能力？
+需要哪些模型、工具和上下文？
+由哪些终端、边缘和云端 Agent 协作？
+在什么位置执行才能同时满足时延、隐私、成本和资源约束？
+```
+
+因此，TACN 的本质不是单纯的 computing offloading network，而是：
+
+> **intent-driven agentic computing network，即意图驱动的智能体算力网络。**
+
+---
+
+## 4. TACN 的核心定位
+
+TACN 的核心定位可以概括为：
+
+> **现有 Agent 框架解决的是"单个 Agent 如何完成任务"，TACN 解决的是"网络中大量分布式 Agent 如何被组织起来完成复杂意图"。**
+
+二者不是替代关系，而是分层关系。
+
+| 层级 | 名称 | 关注对象 | 核心问题 |
+| --- | --- | --- | --- |
+| 第一层 | Model Layer | 大模型 / 小模型 | 模型如何理解、推理和生成 |
+| 第二层 | Agent Runtime Layer | 单个 Agent | Agent 如何规划、调用工具、管理上下文和执行任务 |
+| 第三层 | TACN Layer | 分布式终端、边缘、云端 Agent 网络 | 多个异构 Agent 如何被发现、选择、组合、调度和协同 |
+
+可以进一步概括为：
+
+```text
+LLM 是智能内核
+Agent 是具备执行流程的智能体
+TACN 是连接和编排大量分布式 Agent 的网络系统
+```
+
+因此，TACN 不应与 OpenAI Agent、Claude Agent、LangGraph、AutoGen 等系统竞争"谁更会做 Agent 内部流程"。TACN 应该解决的是一个更偏网络和系统架构的问题：
+
+> **如何把广泛分布在端、边、云的智能体组织成可发现、可匹配、可调度、可协同的网络化智能资源体系。**
+
+---
 
 ## 5. TACN 要解决的核心问题
 
-TACN 面向复杂智能服务，需要解决以下关键问题。
+TACN 的问题空间比传统任务卸载和普通多 Agent 系统更复杂。它主要解决以下五类问题。
 
-| 问题 | TACN 中的含义 |
-| --- | --- |
-| 复杂意图如何被网络理解 | 从自然语言请求、应用请求、传感事件或多模态输入中识别真实目标 |
-| 复杂任务如何被拆解 | 将复杂意图转换为带依赖关系、可并行关系和工具/上下文需求的子任务图 |
-| 智能体能力如何被建模 | 维护包含 capability、model、tool、context、latency、cost、privacy risk、reliability、load 的能力画像 |
-| 智能体如何被匹配和调度 | 综合能力覆盖、模型适配、工具可用、上下文访问、资源状态、网络时延、成本、隐私风险和截止期选择执行者 |
-| 多智能体如何协作执行 | 支持子任务分配、中间结果传递、上下文共享、工具协同、状态同步、失败回退和结果聚合 |
-| 如何实现 MTCC 联合编排 | 对模型、工具、算力和上下文进行联合选择，而不是只决定执行位置 |
+### 5.1 Agent 能力如何被网络发现和描述？
 
-其中，**Model-Tool-Compute-Context Co-Orchestration（MTCC）** 是 TACN 的关键创新之一。它为每个子任务同时决定 selected agent、selected model、selected tool、selected context、selected compute tier、privacy action 和 execution mode。
+传统网络识别的是：
 
-## 6. 总体架构
+```text
+设备地址、链路状态、带宽、时延、算力、存储
+```
 
-TACN 的总体架构可以概括为：
+TACN 需要进一步识别：
 
-> 四层架构 + 三个控制面 + 双闭环优化
+```text
+Agent 能力、模型能力、工具权限、上下文访问范围、隐私风险、当前负载、服务质量
+```
 
-### 6.1 四层架构
+也就是说，TACN 中的节点不再只是物理设备或算力节点，而是具备不同智能能力的 Agent 节点。
 
-| 层级 | 名称 | 作用 |
+例如，一个摄像头不再只是视频流采集设备，而可以被抽象为：
+
+```text
+camera_agent:
+  capability: visual perception, anomaly detection
+  model: lightweight vision model
+  tool: camera stream access
+  context: local scene context
+  location: terminal / edge
+  privacy_level: high
+  latency: low
+```
+
+这意味着 TACN 需要建立一种面向 Agent 的能力描述、注册和发现机制。
+
+### 5.2 复杂用户意图如何转化为子任务图？
+
+复杂任务通常不能由一个 Agent 一步完成，而需要拆解为多个具有依赖关系的子任务。
+
+传统任务卸载系统看到的是：
+
+```text
+数据量 + 计算量 + 截止期
+```
+
+TACN 看到的是：
+
+```text
+复杂意图 + 子任务依赖 + 能力需求 + 工具需求 + 上下文需求 + 隐私约束 + 协作需求
+```
+
+例如，一个复杂意图可能被拆解为：
+
+```text
+事件检测
+    |
+多源信息验证
+    |
+上下文检索
+    |
+策略推理
+    |
+决策生成
+    |
+工具执行
+    |
+结果反馈
+```
+
+这个子任务图是 TACN 进行智能体编排的基础。
+
+### 5.3 子任务应该分配给哪些 Agent？
+
+每个子任务需要的能力不同，适合的 Agent 也不同。
+
+| 子任务类型 | 所需能力 | 适合的 Agent 类型 |
 | --- | --- | --- |
-| L1 | 端-网-边-云基础设施层 | 提供通信、计算、感知、存储和执行环境，包括终端设备、邻近终端、无线接入网络、D2D/sidelink、边缘节点、云端平台、工具接口和数据源 |
-| L2 | 智能体资源与能力抽象层 | 将异构设备和节点抽象为可管理、可发现、可调度的智能体资源，维护 Agent Registry、Capability Profile、Model Registry、Tool Registry、Context Registry 和资源状态 |
-| L3 | 意图感知的智能体编排与协作层 | 将复杂用户意图转化为可执行的多智能体协作计划，完成意图解析、子任务图生成、能力匹配、MTCC 编排、调度、监控和反馈适配 |
-| L4 | 智能服务与应用层 | 承载面向用户和业务的复杂智能服务，负责意图入口、业务接口、结果解释、用户反馈和服务策略更新 |
+| 视觉确认 | vision reasoning | 摄像头 Agent / 边缘视觉 Agent |
+| 传感器分析 | sensor analysis | 传感器 Agent / 边缘传感 Agent |
+| 文档检索 | context retrieval | RAG Agent / 边缘知识 Agent |
+| 路径规划 | planning | 边缘规划 Agent / 云端规划 Agent |
+| 复杂推理 | long-context reasoning | 云端推理 Agent |
+| 隐私过滤 | privacy filtering | 本地隐私 Agent |
+| API 调用 | tool invocation | 工具 Agent |
 
-L3 是 TACN 的核心层。它的典型处理链路是：
+因此，TACN 的关键不是"是否调用工具"，而是：
+
+> **网络如何根据子任务需求、Agent 能力、上下文权限、工具可用性和资源状态，选择最合适的 Agent 组合。**
+
+### 5.4 Agent 选择如何同时考虑语义、能力、资源和隐私？
+
+普通 Agent 系统可能主要根据任务语义选择工具或子 Agent，但 TACN 必须考虑真实网络环境。
+
+TACN 的 Agent 选择需要同时考虑：
+
+- Agent 是否具备所需能力；
+- Agent 当前是否过载；
+- Agent 离数据源是否足够近；
+- 任务是否需要本地隐私保护；
+- 该 Agent 是否可以访问必要上下文；
+- 该 Agent 是否可以调用必要工具；
+- 当前网络链路是否满足时延要求；
+- 是否需要终端、边缘、云端协同；
+- 是否需要云端大模型兜底；
+- 执行成本是否可接受。
+
+因此，TACN 的调度依据是：
 
 ```text
-user request
--> parsed intent
--> subtask graph
--> agent capability matching
--> execution plan
--> collaborative execution
+语义能力匹配
++ 模型能力匹配
++ 工具可用性
++ 上下文可访问性
++ 算力资源状态
++ 网络链路状态
++ 隐私约束
++ 成本约束
++ 截止期约束
 ```
 
-### 6.2 三个控制面
+这也是 TACN 区别于普通 Agent Framework 的关键。
 
-三个控制面贯穿 TACN 的四层架构。
+### 5.5 模型、工具、算力和上下文如何联合编排？
 
-| 控制面 | 主要职责 | 回答的问题 |
+TACN 的核心不是单独选择一个计算节点，也不是单独选择一个模型，而是联合决定：
+
+```text
+Which Agent
++ Which Model
++ Which Tool
++ Which Context
++ Which Compute Location
++ Which Network Path
+```
+
+这就是 **Model-Tool-Compute-Context Orchestration** 的含义。
+
+它体现了 TACN 从"算力调度"到"智能体能力编排"的升级。
+
+---
+
+## 6. TACN 与相关系统的区别
+
+### 6.1 TACN 与 MEC 的区别
+
+| 维度 | MEC | TACN |
 | --- | --- | --- |
-| 资源控制面 | 终端资源监测、边缘负载感知、云端资源调度、链路状态监测、队列估计、能耗管理、网络切片、拥塞控制 | 当前哪些资源可用？哪些资源拥塞？任务如何获得足够的网络和计算支撑？ |
-| 语义与智能体控制面 | 用户意图解析、任务语义识别、子任务图生成、智能体能力发现、能力匹配、模型/工具/上下文选择、多智能体协作关系管理 | 用户真正想完成什么？该任务需要哪些能力？应由哪些智能体协同完成？ |
-| 信任、安全与隐私控制面 | 隐私敏感任务识别、本地数据最小化处理、数据脱敏、智能体身份认证、可信度评估、工具权限控制、上下文访问控制、执行审计 | 哪些数据不能离开本地？哪些智能体可信？哪些工具可以调用？执行结果是否可靠？ |
+| 核心问题 | 任务是否卸载到边缘 | 复杂意图如何由多个 Agent 协同完成 |
+| 输入对象 | 计算任务 | 用户复杂意图或事件触发任务 |
+| 调度对象 | 计算资源、通信资源 | Agent、模型、工具、上下文、算力、网络 |
+| 主要目标 | 降低时延、节省终端能耗 | 提高复杂任务完成率，并兼顾时延、隐私、成本和资源效率 |
+| 智能程度 | 以资源调度为主 | 以意图理解和能力编排为核心 |
 
-在 TACN 中，隐私与安全不是附加模块，而是影响智能体选择、模型选择、上下文访问和执行位置的重要约束。
-
-### 6.3 双闭环优化
-
-TACN 包含两个相互耦合的闭环优化过程。
-
-资源-能力优化环关注系统执行效率与智能体能力画像：
+MEC 关注的是：
 
 ```text
-资源感知
--> Agent 能力建模
--> 模型-工具-算力-上下文编排
--> 协作执行反馈
--> 资源与能力状态更新
+任务放在哪里算？
 ```
 
-意图-服务优化环关注意图理解和服务质量：
+TACN 关注的是：
 
 ```text
-用户意图
--> 意图解析
--> 任务图生成
--> Agent 能力匹配
--> 多 Agent 协作执行
--> 结果交付
--> 用户反馈与服务策略更新
+任务应该由哪些智能体、以什么方式协作完成？
 ```
 
-两个闭环在 Agent 选择、编排调度、协作执行、执行反馈和用户反馈处耦合。可以概括为：
+### 6.2 TACN 与 CPN 的区别
 
-> 意图环决定“要完成什么、由谁协作完成”；资源环决定“如何高效、可靠、安全地完成”。
+CPN 强调算力可感知、可路由、可调度。
 
-## 7. TACN 工作流程
-
-TACN 的典型工作流程如下：
+CPN 解决的问题是：
 
 ```text
-User / Application Request
-      ↓
-Intent Parsing
-      ↓
-Structured Intent
-      ↓
-Subtask Graph Generation
-      ↓
+哪个节点有足够算力执行任务？
+```
+
+TACN 解决的问题是：
+
+```text
+这个复杂意图需要哪些智能能力？
+哪些终端、边缘和云端 Agent 能够协作完成？
+如何同时满足隐私、时延、成本和资源状态约束？
+```
+
+| 维度 | CPN | TACN |
+| --- | --- | --- |
+| 网络对象 | 算力节点 | 智能体节点 |
+| 调度对象 | CPU、GPU、带宽、存储 | Agent、模型、工具、上下文、算力和网络 |
+| 任务抽象 | 计算任务 | 复杂用户意图 |
+| 关键能力 | 算力感知与调度 | 意图解析、子任务拆解、能力匹配和协同编排 |
+| 网络目标 | 高效计算 | 复杂意图完成 |
+
+因此，TACN 可以看作 CPN 面向智能体时代的升级形态，但它不是 CPN 的简单扩展。它的核心变化是：
+
+```text
+从算力资源调度
+    |
+到智能体能力编排
+```
+
+### 6.3 TACN 与普通 Agent 系统的区别
+
+普通 Agent 系统主要关注单个或多个软件 Agent 如何规划、推理、调用工具和完成任务。
+
+TACN 则把 Agent 放入真实的端—边—云网络环境中，进一步考虑：
+
+- 无线接入；
+- 终端移动性；
+- 边缘节点负载；
+- 终端算力差异；
+- 隐私边界；
+- 网络链路状态；
+- 多终端协作；
+- 端侧数据就近处理；
+- 云端大模型兜底推理。
+
+| 维度 | 普通 Agent 系统 | TACN |
+| --- | --- | --- |
+| 主要对象 | 软件 Agent | 终端、边缘、云端分布式 Agent |
+| 运行环境 | 云端或软件平台 | 真实端—边—云网络环境 |
+| 关注重点 | 推理、规划、工具调用 | 智能体能力、网络资源、执行位置和隐私约束联合编排 |
+| 资源建模 | 通常较弱 | 显式考虑算力、带宽、时延、负载和隐私 |
+| 终端作用 | 多为用户入口 | 原生智能体节点 |
+| 网络作用 | 通信通道 | 智能体协作与能力编排基础设施 |
+
+所以，TACN 不是普通多 Agent 系统，而是：
+
+> **Networked Terminal-Agent Collaboration，即网络化终端智能体协作体系。**
+
+---
+
+## 7. TACN 的核心主张
+
+TACN 可以概括为一句话：
+
+> **Future networks should not merely connect terminal devices; they should network terminal agents.**
+
+也就是说，未来网络不应只连接终端设备，而应连接、组织和调度终端智能体。
+
+TACN 的核心主张包括五点。
+
+### 7.1 从设备联网到智能体联网
+
+传统网络连接的是设备。
+
+TACN 连接的是智能体能力。
+
+```text
+Connected Devices
+    |
+Networked Agents
+```
+
+终端不再只是 IP 地址背后的设备，而是具备感知、推理、工具调用和上下文访问能力的智能体节点。
+
+### 7.2 从任务卸载到意图完成
+
+传统 MEC 和 CPN 关注任务卸载。
+
+TACN 关注复杂意图完成。
+
+```text
+Task Offloading
+    |
+Intent Fulfillment
+```
+
+网络不再只看到数据量和计算量，而是首先理解用户意图，并将意图转化为可执行的子任务图。
+
+### 7.3 从资源调度到能力编排
+
+传统系统调度 CPU、GPU、带宽和存储。
+
+TACN 调度智能体能力，包括：
+
+- 视觉理解；
+- 传感器分析；
+- RAG 检索；
+- 工具调用；
+- 路径规划；
+- 安全决策；
+- 多智能体协作；
+- 长上下文推理。
+
+```text
+Resource Scheduling
+    |
+Agentic Capability Orchestration
+```
+
+### 7.4 从单点执行到多智能体协作
+
+一个复杂任务通常无法由单个 Agent 完成，而需要终端、邻近终端、边缘节点和云端 Agent 协同执行。
+
+```text
+Single-Agent Execution
+    |
+Distributed Multi-Agent Collaboration
+```
+
+### 7.5 从静态网络到反馈驱动的智能闭环网络
+
+TACN 不只是一次性调度系统，而应根据：
+
+- 任务成功率；
+- 尾部时延；
+- 成本；
+- 隐私风险；
+- 用户反馈；
+- Agent 运行状态；
+- 网络资源变化；
+
+持续优化编排策略。
+
+---
+
+## 8. TACN 的系统架构
+
+TACN 可以采用"四层三面双闭环"的架构进行描述。
+
+### 8.1 四层架构
+
+#### L1：Agent Access and Network Weaving Layer
+
+这一层解决：
+
+> **分布式终端 Agent 如何接入网络，并被网络感知和管理。**
+
+主要包括：
+
+- 手机、摄像头、传感器、机器人、AR 眼镜、车载终端、无人机等终端接入；
+- 边缘服务器和云端节点接入；
+- 5G-A/6G 无线接入；
+- D2D 通信；
+- 端—边—云协同链路；
+- 网络状态感知；
+- Agent 状态暴露。
+
+这一层的重点不是展示过多通信协议细节，而是说明：
+
+> **TACN 首先需要把分散的终端智能体编织成一个可连接、可感知、可管理的智能体网络。**
+
+#### L2：Agent Capability and Resource Abstraction Layer
+
+这一层解决：
+
+> **网络如何理解每个 Agent 能做什么，以及它当前处于什么状态。**
+
+主要抽象内容包括：
+
+- Agent capability profile；
+- model profile；
+- tool profile；
+- context profile；
+- compute profile；
+- privacy profile；
+- network state profile；
+- service quality profile。
+
+这一层是 TACN 区别于传统 CPN 的关键。
+
+CPN 主要抽象算力资源，而 TACN 需要同时抽象：
+
+```text
+智能体能力
++ 模型能力
++ 工具能力
++ 上下文权限
++ 算力状态
++ 网络状态
++ 隐私属性
+```
+
+#### L3：Intent-Aware Agent Orchestration Layer
+
+这一层是 TACN 的核心编排层。
+
+它解决：
+
+> **复杂意图如何被转化为跨 Agent、跨模型、跨工具、跨上下文和跨算力位置的执行计划。**
+
+主要功能包括：
+
+- 意图解析；
+- 子任务图构建；
+- 能力需求提取；
+- Agent 发现；
+- Agent 匹配；
+- 模型选择；
+- 工具选择；
+- 上下文选择；
+- 算力位置选择；
+- 资源感知路由；
+- 执行计划生成；
+- 多智能体协同控制。
+
+这一层必须突出，因为它是 TACN 的核心创新层。
+
+#### L4：Agentic Service and Feedback Layer
+
+这一层面向用户和行业应用，负责将多 Agent 协作结果转化为最终智能服务。
+
+典型应用包括：
+
+- 智慧园区应急响应；
+- 工业设备诊断；
+- 机器人协同巡检；
+- 车联网协同感知；
+- 智慧城市公共安全；
+- 智能家居多设备协作；
+- 医疗辅助服务；
+- 无人机低空协同；
+- 应急救援现场感知与决策。
+
+这一层体现 TACN 的服务价值。
+
+需要强调的是：
+
+> **这些应用只是 TACN 的落地场景，不是 TACN 的定义边界。**
+
+### 8.2 三个控制面
+
+#### 1. Intent and Task Plane
+
+该平面负责理解用户意图并生成任务结构。
+
+主要功能包括：
+
+- 用户请求理解；
+- 意图分类；
+- 子意图识别；
+- 子任务图构建；
+- 截止期识别；
+- 隐私属性识别；
+- 协作需求识别。
+
+#### 2. Agent and Capability Plane
+
+该平面负责维护 Agent 能力注册表，并完成能力匹配。
+
+主要功能包括：
+
+- Agent 注册；
+- 能力描述；
+- 模型能力描述；
+- 工具权限描述；
+- 上下文访问权限描述；
+- Agent 服务质量建模；
+- Agent 成本、时延和隐私风险建模；
+- 子任务到 Agent 的匹配。
+
+#### 3. Resource and Execution Plane
+
+该平面负责资源感知和执行控制。
+
+主要功能包括：
+
+- 终端资源状态监测；
+- 边缘资源状态监测；
+- 云端资源状态监测；
+- 网络链路状态监测；
+- 执行位置选择；
+- 任务调度；
+- 多智能体协作执行；
+- 执行结果反馈。
+
+### 8.3 双闭环机制
+
+#### 短时闭环：任务执行闭环
+
+短时闭环关注单个复杂任务能否被成功完成。
+
+流程为：
+
+```text
+复杂意图输入
+    |
+意图解析
+    |
+子任务拆解
+    |
+智能体能力匹配
+    |
+模型—工具—算力—上下文联合编排
+    |
+多智能体协作执行
+    |
+服务结果返回
+```
+
+该闭环关注：
+
+- 单次任务成功率；
+- 端到端时延；
+- 工具调用成功率；
+- 上下文命中率；
+- 隐私约束是否满足；
+- 任务截止期是否满足。
+
+#### 长时闭环：系统优化闭环
+
+长时闭环关注系统长期运行中的自适应优化。
+
+系统根据长期运行数据持续优化：
+
+- 意图解析策略；
+- 子任务拆解策略；
+- Agent 匹配策略；
+- 模型选择策略；
+- 工具调用策略；
+- 上下文管理策略；
+- 资源调度策略；
+- 隐私保护策略；
+- 成本控制策略。
+
+该闭环体现 TACN 从静态编排系统向自优化智能网络演进。
+
+---
+
+## 9. TACN 的核心工作流程
+
+TACN 的完整流程可以描述为：
+
+```text
+Complex User Intent
+    |
+Intent Abstraction
+    |
+Subtask Graph Construction
+    |
 Agent Capability Discovery
-      ↓
+    |
 Agent Capability Matching
-      ↓
+    |
 Model-Tool-Compute-Context Orchestration
-      ↓
-Collaborative Execution
-      ↓
-Result Delivery
-      ↓
-Execution Feedback
-      ↓
-Resource and Service Policy Update
+    |
+Distributed Agent Execution
+    |
+Result Aggregation and Feedback
 ```
 
-该流程体现了 TACN 的完整链路：从用户或应用请求中识别复杂意图，将意图转换为结构化任务表示，构建子任务图，发现并匹配智能体能力，联合选择模型、工具、上下文和计算位置，组织多智能体协作执行，交付结果，并持续更新资源状态、能力画像和服务策略。
+### 9.1 复杂请求输入
 
-## 8. TACN-Proto 原型定位
+输入可以来自用户自然语言请求，也可以来自终端事件、传感器告警、设备状态变化或系统任务触发。
 
-TACN-Proto 是用于验证 TACN 核心思想的轻量级实验原型。它不声称实现完整真实的商用终端智能体算力网络，而是验证以下问题：
+TACN 面向的是通用复杂意图，而不是某一个固定场景。
 
-- 复杂用户意图是否可以被解析为结构化任务表示；
-- 复杂任务是否可以被转换为子任务图；
-- 子任务是否可以根据能力需求匹配到合适智能体；
-- 模型、工具、算力和上下文是否可以被联合编排；
-- 多智能体协作执行是否可以被记录、评估和反馈；
-- TACN 是否能在任务成功率、尾部时延、隐私保护和成本之间取得更优折中。
+### 9.2 意图解析
 
-当前原型支持：
+系统识别任务的高层意图，并提取：
 
-- 生成终端智能体复杂任务负载；
-- 模拟 local / peer / edge / cloud 等异构执行实体；
-- 维护通用 TACN core catalog 和场景实例 catalog；
-- 实现 cloud-only、resource-aware CPN、LLM semantic router、TACN-O 等比较方法；
-- 实现 TACN-Orchestrator（TACN-O）和关键消融项；
-- 输出 CSV 结果、汇总表、trace、报告和论文可用图；
-- 可选接入 OpenAI-compatible 模型 API，用于小样本真实 LLM Agent 证据。
+- 子意图；
+- 能力需求；
+- 工具需求；
+- 上下文需求；
+- 隐私属性；
+- 截止期；
+- 是否需要多 Agent 协作。
 
-`configs/config.yaml` 是集中配置入口。`tacn_core` 维护场景无关的 TACN 核心能力：意图模板、复杂任务 DAG 模板、终端/边缘/云 AgentProfile、能力词表和通用任务族；`scenario_catalog` 只维护智能校园、智能工厂、智慧医院等应用场景实例。应用场景只是 TACN 的适配器，不定义 TACN 的完整 Agent 能力边界。
+### 9.3 子任务图构建
 
-## 9. 核心模块与代码映射
+系统将复杂任务拆解为具有依赖关系的子任务图，而不是把任务当成一个整体计算负载。
 
-TACN-Proto 的后端实现位于 `backend/`，采用扁平包结构。四层架构（L1-L4）的逻辑分层通过代码的 import 依赖和模块职责划分来表达，而非目录前缀。
+子任务图可以是串行结构，也可以包含并行结构、反馈结构和条件分支。
 
-| TACN 模块 | 作用 | 主要实现位置 |
-| --- | --- | --- |
-| Complex Workload Generator | 生成复杂终端智能体任务负载 | `backend/workload/generator.py` |
-| Intent Parser | 将请求解析为结构化意图 | `backend/parser/intent_parser.py` |
-| Subtask Graph Builder | 将复杂意图转换为子任务图 | `backend/parser/subtask_builder.py` |
-| Agent Registry | 维护智能体能力画像 | `backend/registry/agent_registry.py` |
-| Agent Capability Router | 根据子任务需求和资源状态匹配智能体 | `backend/router/capability_router.py` |
-| Orchestration Engine | 编排引擎，协调意图解析→子任务→路由→执行 | `backend/orchestration/engine.py` |
-| TACN System | 完整 TACN 流水线（LLM 驱动） | `backend/orchestration/tacn_system.py` |
-| Agent Collaboration / Bus | 记录多智能体消息、重试、回退和结果传递 | `backend/agent/message.py` |
-| Simulation Executor | 仿真实验执行器 | `backend/simulation/simulation.py` |
-| Evaluation Metrics | 统计指标计算 | `backend/evaluation/metrics.py` |
-| Baselines | 对比方法（Cloud-Only、CPN、Semantic Router） | `backend/baselines/` |
-| LLM Client | OpenAI-compatible 模型接入 | `backend/llm/` |
-| FastAPI API | REST API 入口 | `backend/api/` 和 `backend/main.py` |
+### 9.4 智能体能力发现
 
-## 10. 快速开始
+系统查询 Agent Registry，了解当前网络中有哪些 Agent 可用，以及它们具备哪些能力。
 
-```bash
-cd tacn_impl
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-```
+### 9.5 智能体能力匹配
 
-默认不需要 API key，先运行演示脚本验证核心流程：
+系统根据子任务需求选择合适 Agent。
 
-```bash
-python examples/demo.py              # 单请求 + 批量实验 + 意图类型演示
-python examples/demo_tacn.py         # 完整 TACN 流水线演示（LLM 驱动）
-python examples/demo_agent.py        # Agent 执行演示
-python examples/demo_multi_agent.py  # 多层级 Agent 演示
-```
+匹配时需要综合考虑：
 
-启动 FastAPI 服务和前端：
+- 能力覆盖；
+- 执行质量；
+- 时延；
+- 成本；
+- 隐私风险；
+- 当前负载；
+- 工具权限；
+- 上下文访问权限；
+- 是否满足截止期。
 
-```bash
-cd backend && uvicorn main:app --reload --port 8000
-# 然后打开 frontend/index.html
-```
+### 9.6 模型—工具—算力—上下文联合编排
 
-API 端点：
+系统进一步决定：
 
-- `POST /api/tasks/process` — 处理用户请求，返回执行计划
-- `POST /api/tasks/execute` — 执行已生成的计划
-- `POST /api/experiments/run` — 运行对比实验
-- `GET /api/agents` — 获取所有 Agent 信息
+- 每个子任务使用哪个模型；
+- 调用哪个工具；
+- 访问哪些上下文；
+- 在终端、边缘还是云端执行；
+- 是否需要多个 Agent 协作；
+- 是否需要隐私过滤；
+- 是否需要云端大模型兜底。
 
-## 11. 使用 OpenAI-compatible API
+### 9.7 多智能体协作执行
 
-请把 key 写入 `.env`，不要写进代码、README 或实验日志，不要提交到 Git。
+被选中的 Agent 按照执行计划完成各自任务。
 
-```env
-TACN_API_KEY=填入你的key
-TACN_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
-TACN_MODEL=gpt-4o-mini
-TACN_USE_REAL_LLM=false
-```
+需要强调的是：
 
-第一版建议保持：
+> **TACN 决定谁来做、在哪里做、用什么资源做；Agent Runtime 决定单个 Agent 内部具体怎么做。**
 
-```env
-TACN_USE_REAL_LLM=false
-```
+### 9.8 结果聚合与反馈优化
 
-原因是仿真实验更稳定、更便宜、更容易复现。等实验框架稳定后，再把部分任务切换为真实 API 调用。
+系统将多个 Agent 的执行结果聚合为最终服务结果，并记录：
 
-## 12. 项目结构
+- 任务是否成功；
+- 总时延；
+- 成本；
+- 隐私风险；
+- Agent 匹配是否合理；
+- 工具调用是否成功；
+- 上下文是否命中；
+- 是否需要更新后续编排策略。
+
+---
+
+## 10. TACN 中不同智能体的角色
+
+### 10.1 Terminal Agent
+
+Terminal Agent 是部署在终端设备上的智能体。
+
+典型设备包括：
+
+- 手机；
+- 摄像头；
+- 传感器；
+- 巡检机器人；
+- AR 眼镜；
+- 车载终端；
+- 工业设备；
+- 可穿戴设备；
+- 无人机。
+
+主要职责包括：
+
+- 本地感知；
+- 本地轻量推理；
+- 隐私过滤；
+- 用户上下文管理；
+- 初步意图识别；
+- 与邻近终端协作；
+- 向边缘或云端发起协同请求。
+
+Terminal Agent 的价值在于：
+
+> **离数据源最近、时延低、隐私友好、能够利用本地上下文。**
+
+### 10.2 Peer Agent
+
+Peer Agent 是邻近终端上的协作智能体。
+
+例如：
+
+- 多个摄像头之间协作；
+- 多个机器人之间协作；
+- 多个传感器之间协作；
+- 用户手机与 AR 眼镜协作；
+- 多辆车之间协作；
+- 多架无人机之间协作。
+
+主要职责包括：
+
+- 多终端感知融合；
+- 邻近任务协作；
+- 本地信息补充；
+- D2D 协同；
+- 降低对云端的依赖。
+
+Peer Agent 的意义在于：
+
+> **TACN 不只是端—边—云垂直协同，也包括终端之间的横向协同。**
+
+### 10.3 Edge Agent
+
+Edge Agent 部署在边缘服务器、边缘网关、路侧单元、园区边缘节点或工业边缘节点上。
+
+主要职责包括：
+
+- 边缘视觉理解；
+- 传感器事件分析；
+- 本地 RAG 检索；
+- 工具调用代理；
+- 多终端协作协调；
+- 低时延任务执行；
+- 局部隐私保护。
+
+Edge Agent 是 TACN 的关键执行枢纽。
+
+它既比终端具备更强算力，又比云端更接近现场，因此适合承担低时延、局部协作和隐私敏感任务。
+
+### 10.4 Cloud Agent
+
+Cloud Agent 部署在云端，通常具备最强模型能力、长上下文能力和全局知识整合能力。
+
+主要职责包括：
+
+- 复杂推理；
+- 长链规划；
+- 大模型推理；
+- 跨区域知识整合；
+- 全局策略优化；
+- 复杂异常场景兜底处理。
+
+但是，Cloud Agent 不应处理所有任务。
+
+在 TACN 中，Cloud Agent 更适合作为：
+
+- 高复杂度任务的兜底资源；
+- 全局推理资源；
+- 非强实时任务的执行资源；
+- 跨区域知识整合资源。
+
+---
+
+## 11. TACN 的多场景适用性
+
+TACN 是通用架构，不是为智慧园区单一场景设计的系统。
+
+它可以应用于多类端—边—云智能服务场景。
+
+| 应用场景 | TACN 可支撑的复杂任务 |
+| --- | --- |
+| 智慧园区 | 应急响应、协同安防、机器人巡检、智能会议 |
+| 工业互联网 | 设备故障诊断、预测性维护、多机器人协作、生产调度 |
+| 车联网 | 协同感知、道路风险判断、车路云协同决策 |
+| 智慧城市 | 交通调度、公共安全、环境监测、城市应急响应 |
+| 智能家居 | 多设备协同、家庭安全、老人看护、能耗管理 |
+| 医疗辅助 | 可穿戴设备监测、床旁智能体协作、院内资源调度 |
+| 低空经济 | 无人机协同巡检、低空交通管理、应急物资投送 |
+| 应急救援 | 灾害现场感知、多机器人搜救、通信受限环境下的协作 |
+
+这些场景虽然业务不同，但都具有共同特征：
+
+- 终端类型多样；
+- 数据分布在端、边、云不同位置；
+- 任务通常具有复杂意图；
+- 单个 Agent 难以独立完成；
+- 需要模型、工具、上下文和算力协同；
+- 存在低时延、隐私、成本和可靠性约束。
+
+因此，TACN 的通用价值在于：
+
+> **为多类智能服务场景提供一种复杂意图到分布式智能体协作的网络级编排机制。**
+
+---
+
+## 12. 智慧园区只是代表性案例
+
+虽然 TACN 不应被定义为智慧园区系统，但智慧园区可以作为一个代表性案例。
+
+原因是智慧园区同时包含：
+
+- 用户手机；
+- 摄像头；
+- 传感器；
+- 机器人；
+- 门禁系统；
+- 楼宇设备；
+- 边缘服务器；
+- 云端平台。
+
+它天然适合展示：
+
+- 多源感知；
+- 多终端协作；
+- 低时延响应；
+- 隐私保护；
+- 工具调用；
+- 上下文检索；
+- 复杂任务编排。
+
+例如，在智慧园区中，可能出现如下任务：
 
 ```text
-tacn_impl/
-├── pyproject.toml             # Python 项目配置
-├── requirements.txt           # Python 依赖
-├── .env.example               # 环境变量模板
-├── backend/
-│   ├── main.py                # FastAPI 应用入口
-│   ├── core/
-│   │   └── models.py          # 核心数据模型（Intent、SubTask、AgentProfile 等）
-│   ├── parser/
-│   │   ├── intent_parser.py   # 意图解析器（LLM tool-calling + 关键词回退）
-│   │   ├── subtask_builder.py # 子任务图构建器（LLM + 模板回退）
-│   │   ├── validators.py      # Pydantic 输出验证
-│   │   └── json_repair.py     # LLM JSON 输出修复
-│   ├── registry/
-│   │   └── agent_registry.py  # 智能体注册表（按 location/capability 索引）
-│   ├── router/
-│   │   └── capability_router.py # 能力路由器（多准则打分）
-│   ├── orchestration/
-│   │   ├── engine.py          # 编排引擎（同步接口）
-│   │   └── tacn_system.py     # TACN 完整流水线（LLM 驱动，异步）
-│   ├── agent/
-│   │   ├── base.py            # BaseAgent 抽象基类
-│   │   ├── llm_agent.py       # LLMAgent（LLM 驱动的智能体）
-│   │   ├── terminal_agent.py  # 终端智能体
-│   │   ├── peer_agent.py      # 对等智能体
-│   │   ├── edge_agent.py      # 边缘智能体
-│   │   ├── cloud_agent.py     # 云端智能体
-│   │   ├── factory.py         # AgentFactory / AgentManager
-│   │   ├── message.py         # MessageBus（pub/sub 消息总线）
-│   │   └── tools.py           # Agent 工具（传感器、摄像头等）
-│   ├── baselines/
-│   │   ├── cloud_only.py      # Cloud-Only 基线
-│   │   ├── resource_aware_cpn.py # Resource-Aware CPN 基线
-│   │   └── semantic_router.py # Semantic Router 基线
-│   ├── simulation/
-│   │   └── simulation.py      # 仿真实验执行器
-│   ├── evaluation/
-│   │   └── metrics.py         # 评估指标计算
-│   ├── workload/
-│   │   └── generator.py       # 工作负载生成器
-│   ├── llm/
-│   │   ├── client.py          # OpenAI-compatible LLM 客户端
-│   │   └── config.py          # LLM 配置
-│   └── api/
-│       ├── tasks.py           # 任务处理 API
-│       ├── agents.py          # Agent 管理 API
-│       └── experiments.py     # 实验 API
-├── frontend/
-│   ├── index.html             # Web 前端（HTML + Chart.js）
-│   ├── css/style.css
-│   └── js/
-├── examples/
-│   ├── demo.py                # 综合演示
-│   ├── demo_tacn.py           # TACN 完整流水线演示
-│   ├── demo_agent.py          # Agent 执行演示
-│   ├── demo_multi_agent.py    # 多层级 Agent 演示
-│   └── demo_agent_communication.py # Agent 通信演示
-└── docs/
-    ├── tacn_project_outline.md    # 项目概念基准
-    ├── experiment_positioning.md  # 实验定位
-    └── tacn_alignment_plan.md     # 代码对齐重构方案
+实验楼 A 的烟雾传感器报警，请结合摄像头画面、最近维护记录和安全规范，判断是否需要触发消防告警，并通知附近人员。
 ```
 
-## 13. 实验任务与评价指标
+这个任务可以被 TACN 拆解为：
 
-为了体现 TACN 的复杂意图和多智能体协作特征，实验任务应避免退化为简单问答或单节点推理。当前原型以通用任务族建模，并通过场景适配器实例化。
+```text
+传感器事件验证
+    |
+摄像头视觉确认
+    |
+维护记录检索
+    |
+安全规范查询
+    |
+风险判断
+    |
+告警决策
+    |
+通知工具调用
+```
 
-| 通用任务族 | 关注能力 |
+然后分配给不同智能体：
+
+| 子任务 | 推荐智能体 |
 | --- | --- |
-| `event_response` | 低时延、隐私、安全推理、工具调用、多智能体协作 |
-| `mobile_inspection` | 传感器分析、设备查询、维护记录、路径规划 |
-| `collaborative_perception` | 多终端感知、多模态融合、风险判断 |
-| `context_aware_decision` | RAG 检索、设备日志、规则推理、决策支持 |
-| `personal_assistant_service` | 日程、通知、用户上下文、隐私过滤、工具调用 |
+| 传感器事件验证 | edge_sensor_agent |
+| 摄像头视觉确认 | edge_vision_agent |
+| 维护记录检索 | edge_rag_agent |
+| 安全规则推理 | edge_safety_agent |
+| 通知执行 | edge_tool_agent |
 
-核心评价指标包括：
+因此，智慧园区适合作为论文中的示例场景或实验场景，但不能作为 TACN 的定义边界。
+
+正确表述应为：
+
+> **TACN 是通用的终端智能体算力网络，智慧园区只是能够集中体现其复杂意图解析、多终端协作、低时延响应和隐私保护能力的代表性场景之一。**
+
+---
+
+## 13. TACN 的关键技术模块
+
+### 13.1 Intent Parser
+
+负责将自然语言请求或事件输入解析为结构化意图。
+
+输出包括：
+
+- 高层意图；
+- 子意图；
+- 所需能力；
+- 工具需求；
+- 上下文需求；
+- 隐私属性；
+- 截止期；
+- 是否需要多 Agent 协作。
+
+### 13.2 Subtask Graph Builder
+
+负责将复杂意图转化为子任务图。
+
+子任务图体现：
+
+- 子任务顺序；
+- 子任务依赖；
+- 并行结构；
+- 工具调用顺序；
+- 上下文依赖；
+- 关键路径时延。
+
+### 13.3 Agent Registry
+
+负责维护 Agent 能力注册表。
+
+每个 Agent 不仅要登记位置和算力，还要登记：
+
+- 能力集合；
+- 可用模型；
+- 可调用工具；
+- 可访问上下文；
+- 服务质量；
+- 当前负载；
+- 预估时延；
+- 执行成本；
+- 隐私风险。
+
+### 13.4 Agent Capability Router
+
+负责根据子任务需求和系统状态选择合适 Agent。
+
+匹配过程不能只看资源，还要综合考虑：
+
+- 能力覆盖；
+- 模型质量；
+- 工具可用性；
+- 上下文可访问性；
+- 隐私风险；
+- 预估时延；
+- 当前负载；
+- 任务截止期。
+
+### 13.5 Model-Tool-Compute-Context Orchestration
+
+这是 TACN 的核心创新模块。
+
+它联合决定：
+
+- 使用哪个 Agent；
+- 使用哪个模型；
+- 调用哪个工具；
+- 访问哪些上下文；
+- 使用哪个算力位置；
+- 走哪条执行路径；
+- 是否需要终端、边缘、云端协同。
+
+这一模块使 TACN 从传统算力调度升级为智能体能力编排。
+
+### 13.6 Feedback and Optimization
+
+负责记录执行结果，并优化后续编排策略。
+
+反馈信息包括：
+
+- 任务成功率；
+- P95 时延；
+- 成本；
+- 隐私风险；
+- 工具调用成功率；
+- 上下文命中率；
+- Agent 匹配质量；
+- 云端参与比例；
+- 用户反馈。
+
+---
+
+## 14. TACN 的评价维度
+
+TACN 的评价不能只看平均时延。因为 TACN 面向的是复杂智能任务，所以应该同时评估任务完成质量、意图解析质量、能力匹配质量和资源使用效率。
 
 | 指标 | 含义 |
 | --- | --- |
 | Task Success Rate | 复杂任务成功完成比例 |
-| P95 Latency | 尾部任务时延 |
+| P95 Latency | 尾部时延，体现实时性和稳定性 |
 | Intent Parsing Accuracy | 意图解析准确率 |
-| Capability Matching Accuracy | 智能体能力匹配准确率 |
-| Agent Assignment Success Rate | 智能体分配成功率 |
-| Privacy Preservation Ratio | 隐私保护比例 |
-| Cloud Offloading Ratio | 云端参与比例 |
-| Cost Efficiency | 成本效率 |
-| Tool Success Rate | 工具调用成功率 |
-| Context Hit Rate | 上下文命中率 |
+| Capability Matching Accuracy | 所选智能体能力是否覆盖任务需求 |
+| Agent Assignment Success Rate | 是否选择到合理智能体 |
+| Privacy Preservation Ratio | 隐私保护程度 |
+| Cloud Offloading Ratio | 云端参与比例，体现端边能力利用 |
+| Cost Efficiency | 单位成本下的任务完成效率 |
+| Tool Invocation Success Rate | 工具调用成功比例 |
+| Context Hit Ratio | 必要上下文是否被正确访问 |
 
-推荐实验主线：
+这些指标共同说明 TACN 是否真正实现了：
 
-1. 系统架构对比：cloud-only、resource-aware CPN、LLM semantic router、TACN-O。
-2. 意图解析质量及其对下游编排的影响。
-3. 负载敏感性：改变 `arrival_rate`。
-4. 消融实验：去掉 LLM intent、capability matching、resource awareness、tool-context awareness、terminal agents。
+```text
+复杂意图理解
++ 智能体能力编排
++ 模型—工具—算力—上下文协同
++ 端—边—云多智能体协作
+```
 
-## 14. 设计原则
+---
 
-TACN-Proto 的实现应遵循以下原则：
+## 15. TACN 的创新点总结
 
-- 以 TACN 机制验证为核心，重点体现意图解析、子任务图生成、Agent 能力匹配、MTCC 联合编排、多智能体协作执行和反馈驱动优化。
-- 以终端智能体为主线，明确体现本地隐私过滤、本地事件初筛、本地轻量推理、邻近终端协作、机器人或 AR 终端现场执行等能力。
-- 以能力画像而非单纯资源画像进行调度，Agent Registry 不应只记录算力和时延，还应记录 capability、model、tool、context、privacy risk、reliability 和 current load。
-- 以 MTCC 联合编排体现创新，每个子任务都应记录 selected agent、selected model、selected tool、selected context、selected compute tier、privacy action 和 execution result。
-- 以轻量闭环更新增强可信度，根据执行反馈更新 Agent reliability、observed latency、resource load、tool success rate、context hit rate、privacy risk estimate 和 routing score。
+### 创新点一：从资源中心网络转向智能体中心网络
 
-## 15. 表述边界
+传统网络连接设备、调度资源。
 
-TACN-Proto 应被表述为轻量级实验原型，而不是完整商用系统。
+TACN 连接智能体、调度能力。
 
-推荐表述：
+### 创新点二：从任务卸载转向复杂意图完成
 
-> This prototype validates the feasibility of intent-aware agentic capability orchestration in TACN.
+TACN 不把任务仅仅看作数据量和计算量，而是看作：
 
-推荐中文表述：
+```text
+用户意图 + 子任务 + 工具 + 上下文 + 能力需求 + 隐私约束 + 截止期约束
+```
 
-> 本项目构建了一个轻量级 TACN 原型，用于验证复杂意图解析、子任务图生成、智能体能力匹配和模型-工具-算力-上下文联合编排的可行性。
+### 创新点三：从单一算力调度转向模型—工具—算力—上下文联合编排
 
-不推荐表述：
+TACN 的调度对象不只是算力资源，而是模型、工具、上下文、智能体和执行位置的联合决策。
 
-> This system fully implements a real-world terminal agent computing network.
+### 创新点四：从单 Agent 执行转向跨端—边—云多智能体协同
 
-如果没有使用真实 LLM API，不应声称系统评估了开放域自然语言理解能力。推荐表述为：
+现有 Agent 框架主要解决单个 Agent 内部如何执行任务。
 
-> This experiment uses reproducible rule parsing and templated workload generation to validate the system relationship among intent parsing, subtask construction, capability matching, and resource-aware orchestration in the TACN architecture, rather than evaluating general-purpose LLM understanding.
+TACN 进一步解决多个分布式 Agent 如何在网络中被组织、选择、组合和协同。
 
-## 16. 应用场景示例
+### 创新点五：从被动网络转向反馈驱动的自优化智能网络
 
-TACN 是通用的终端智能体算力网络架构，而不是面向单一应用场景的专用系统。以下场景只用于说明其应用价值，场景适配器不定义 TACN 的能力边界。
+TACN 可以根据任务执行结果、资源状态、用户反馈和环境变化持续优化编排策略，使网络从静态连接基础设施演进为智能服务基础设施。
 
-### 16.1 智慧园区应急响应
+---
 
-TACN 可以联合传感器智能体、摄像头智能体、边缘安全智能体、RAG 智能体和工具智能体，完成事件确认、风险判断、安全规则检索和通知执行。该场景体现多终端感知、低时延协作、隐私保护、安全规则推理和工具调用。
+## 16. TACN 的准确论文主张
 
-### 16.2 智慧工厂智能运维
+TACN 的论文主张不应该写成：
 
-在智慧工厂中，TACN 可以将产线传感器、工业相机、移动巡检机器人、PLC/设备网关、边缘视觉智能体、边缘 RAG 智能体和云端推理智能体组织为协作网络。面对“产线 A 温度和振动异常，请结合相机画面、维护记录和安全规范判断是否需要降速或停机”的复杂意图，TACN 可以完成传感事件验证、视觉确认、维护记录检索、安全策略推理、停机/降速决策和工单/通知工具调用。
+> We propose a new agent workflow.
 
-该场景体现：
+因为现有 Agent 框架已经具备较成熟的 Agent 内部执行流程。
 
-- 工业终端智能体从数据源升级为协作执行者；
-- 设备维护知识、实时状态和安全规范共同进入上下文编排；
-- 工具调用可以连接 PLC、工单系统、通知系统和质量追踪系统；
-- 隐私、安全和生产连续性约束会影响 Agent 选择和执行位置；
-- 智慧工厂只是 TACN 的一个应用适配器，不是 TACN 的定义边界。
+更准确的主张应该是：
 
-### 16.3 巡检机器人协同诊断
+> **We propose a Terminal Agent Computing Network that orchestrates distributed terminal, edge, and cloud agents for complex intent fulfillment under latency, privacy, cost, and resource constraints.**
 
-机器人智能体可以与边缘传感器智能体、设备状态工具智能体和维护知识智能体协作，完成异常检测、设备查询、风险判断和处理建议生成。该场景体现移动终端智能体、工具调用、上下文检索、边缘侧推理和协作执行。
+中文表述为：
 
-### 16.4 多摄像头协同安防
+> **本文提出终端智能体算力网络 TACN，旨在将分布于终端、边缘和云端的异构智能体组织为可发现、可匹配、可调度、可协同的网络化智能资源体系，从而支撑复杂用户意图在时延、隐私、成本和资源约束下的协同完成。**
 
-多个摄像头智能体可以与边缘视觉智能体和协作智能体配合，完成目标识别、轨迹跟踪、结果融合和风险判断。该场景体现多终端视觉融合、边缘协同推理、多智能体结果聚合和隐私敏感数据本地处理。
+---
 
-### 16.5 个人智能助手服务
+## 17. 给专家汇报时的核心判断句
 
-用户终端智能体可以联合日程工具、地图工具、位置上下文和通知工具，完成日程理解、路线规划、会议摘要和服务提醒。该场景体现用户意图理解、工具调用、上下文感知、隐私过滤和个性化服务交付。
+可以用下面这段作为汇报总结：
 
-## 17. 核心创新总结
+> **TACN，Terminal Agent Computing Network，是面向 5G-A/6G 智能网络的一种通用网络化智能服务架构。现有 OpenAI Agent、Claude Agent 等框架已经具备单个 Agent 内部的推理、规划、工具调用和上下文管理能力，因此 TACN 的目标不是重新设计 Agent 内部流程，而是把分布在终端、边缘和云端的异构 Agent 组织成网络化智能资源。与传统 MEC 或 CPN 不同，TACN 的核心不是决定任务卸载到哪里，而是从复杂用户意图出发，构建子任务图，并根据任务所需能力联合编排终端、边缘和云端 Agent，同时协调模型、工具、算力、上下文和网络资源。其目标是在任务成功率、尾部时延、成本和隐私之间取得更优平衡，使未来网络从"连接设备"演进为"组织智能体完成复杂意图"的基础设施。**
 
-| 创新点 | 含义 |
-| --- | --- |
-| Terminal-agent-native networking | 将终端设备提升为可协作的终端智能体 |
-| Intent-aware orchestration | 从复杂意图出发进行任务解析和服务编排 |
-| Agentic capability networking | 将网络化对象从算力资源扩展为智能体能力 |
-| MTCC co-orchestration | 联合编排模型、工具、算力和上下文 |
-| Dual closed-loop optimization | 同时优化资源-能力状态和意图-服务策略 |
+---
 
-一句话总结：
+## 18. 一句话版本
 
-> TACN 是面向未来 5G-A/6G 的终端智能体算力网络。它将终端设备提升为可协作的终端智能体，并通过复杂意图解析、子任务图生成、智能体能力匹配和模型-工具-算力-上下文联合编排，使网络从“资源调度系统”演进为“智能体能力协作系统”。
+> **TACN 是一种面向终端智能体时代的通用算力网络架构，它以复杂意图为输入，以智能体能力为调度对象，以模型—工具—算力—上下文联合编排为核心机制，实现终端、边缘和云端智能体的网络化协同服务。**
+
+---
+
+## 19. 实现状态与路线图
+
+### 19.1 当前实现状态
+
+TACN 原型系统已实现四层架构的核心链路，可端到端运行。
+
+**已实现模块：**
+
+| 模块 | 文件 | 状态 |
+|------|------|------|
+| 核心数据模型 | `backend/core/models.py` | ✅ Intent、SubTask、SubTaskGraph、AgentProfile、ExecutionPlan、TaskResult |
+| 意图解析器 | `backend/parser/intent_parser.py` | ✅ LLM tool-calling + JSON 解析 + 关键词兜底三级回退 |
+| 子任务构建器 | `backend/parser/subtask_builder.py` | ✅ LLM 分解 + 5 种意图默认模板 |
+| 能力路由器 | `backend/router/capability_router.py` | ✅ 多准则评分（能力×0.35 + 延迟×0.25 + 成本×0.15 + 隐私×0.15 + 负载×0.10） |
+| MTCC 编排器 | `backend/orchestration/mtcc_orchestrator.py` | ✅ 7 维评分联合编排 |
+| Agent 注册表 | `backend/registry/agent_registry.py` | ✅ 按位置/能力索引，动态注册注销 |
+| LLM Agent | `backend/agent/llm_agent.py` | ✅ ReAct 循环 + dispatch map + Hook + 技能加载 + 错误降级 |
+| 工具系统 | `backend/agent/tools.py` | ✅ ToolDef（函数式）+ ToolRegistry（分组管理） |
+| 子 Agent 机制 | `backend/agent/subagent.py` | ✅ delegate_task 工具，fresh context + summary return |
+| Agent 工厂 | `backend/agent/factory.py` | ✅ 按 location 创建，自动注入 delegate_task |
+| 并行执行 | `backend/agent/factory.py` | ✅ asyncio.gather 按 parallel_groups 并行 |
+| 上下文传递 | `backend/orchestration/tacn_system.py` | ✅ 上游 agent 结果自动注入下游 |
+| 上下文压缩 | `backend/agent/llm_agent.py` | ✅ microcompact 清理旧 tool_result |
+| LLM 重试 | `backend/agent/llm_agent.py` | ✅ 指数退避 3 次重试 |
+| 错误降级 | `backend/agent/llm_agent.py` | ✅ 正常→简化prompt→减少工具→兜底 |
+| Hook 系统 | `backend/agent/llm_agent.py` | ✅ PreToolUse / PostToolUse |
+| 技能加载 | `backend/agent/llm_agent.py` | ✅ SkillLoader 运行时注入领域知识 |
+| 消息持久化 | `backend/agent/message.py` | ✅ JSONL 文件邮箱模式 |
+| 隐私过滤 | `backend/agent/terminal_agent.py` | ✅ 敏感字段脱敏 |
+| 执行反馈 | `backend/orchestration/feedback.py` | ⚠️ 资源环已实现，服务环为空 |
+| LLM 客户端 | `backend/llm/client.py` | ✅ OpenAI 兼容 + Mock 回退 |
+
+**验证结果：**
+
+- 端到端流水线可运行：用户请求 → 意图解析 → 子任务分解 → MTCC 路由 → Agent ReAct 执行 → 结果汇总
+- 真实 LLM (mimo-v2.5) 驱动，tool-calling 正常工作
+- 并行执行、上下文传递、Hook 系统均已验证通过
+
+### 19.2 待完成工作
+
+#### P0 — 落地必需
+
+- [ ] **数据池 + HTTP API**：当前工具返回硬编码 mock 数据，需实现轻量数据池，外部通过 HTTP POST 灌入真实数据，工具从池中读取最新值
+- [ ] **工具适配层**：定义 `sensor_data`、`image_data`、`alert_data` 等标准数据结构，工具 handler 从数据池读取而非返回 mock
+- [ ] **反馈闭环补全**：`ExecutionFeedback.update_service_policy` 当前为空，需实现意图-服务优化环
+
+#### P1 — 体验优化
+
+- [ ] **Web API 服务**：FastAPI/Flask 暴露 `POST /api/execute` 接口，前端可发送自然语言请求并获取执行结果
+- [ ] **执行过程可视化**：实时展示意图解析、子任务 DAG、Agent 分配、工具调用过程
+- [ ] **deadline 自适应**：当前 deadline 是硬编码默认值，应根据 LLM 实际延迟动态调整
+
+#### P2 — 能力增强
+
+- [ ] **真实工具适配器**：MQTT 传感器、RTSP 摄像头、HTTP 告警 API 适配器（等场景确定后实现）
+- [ ] **后台任务**：长时间操作（网络搜索、大文件分析）异步执行，不阻塞 ReAct 循环
+- [ ] **Agent 间实时协作**：执行中的 agent 可主动向其他 agent 发消息求助（当前只有上游上下文注入）
+- [ ] **会话记忆**：跨任务的 agent 记忆系统，参考 LCC 的 Memory 模块
+- [ ] **意图解析模板扩展**：当前仅支持 5 种意图类型，需扩展为通用意图解析
+
+### 19.3 架构参考
+
+Agent 实现参考了 [learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) 的 Harness 工程模式：
+
+- 核心 ReAct 循环与 LCC agent_loop 同构
+- 工具系统采用 dispatch map 模式（ToolDef 函数式注册）
+- 子 Agent 采用 fresh context + summary return 模式
+- 上下文管理采用 microcompact 模式
+- 错误处理采用重试 + 降级策略
+
+TACN 与 LCC 的核心区别：LCC 是全自主 Agent（用户给目标，Agent 自己决定做什么），TACN 是编排驱动的执行 Agent（编排层决定做什么，Agent 决定怎么做）。这是面向 IoT 场景的设计选择，不是缺陷。

@@ -5,6 +5,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 @dataclass
 class LLMConfig:
@@ -21,7 +27,7 @@ class LLMConfig:
         default_factory=lambda: os.getenv("TACN_LLM_PROVIDER", "mock")
     )
     model: str = field(
-        default_factory=lambda: os.getenv("TACN_LLM_MODEL", "gpt-4o")
+        default_factory=lambda: os.getenv("TACN_LLM_MODEL", "mimo-v2.5")
     )
     api_key: str = field(
         default_factory=lambda: os.getenv("TACN_LLM_API_KEY", "")

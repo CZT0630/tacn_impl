@@ -170,11 +170,14 @@ class MockLLMClient(LLMClient):
     """模拟 LLM 客户端.
 
     无真实 API 调用，用于开发和测试。
-    tool-calling 参数会被忽略，始终返回文本内容。
+    当传入 tools 时，模拟 tool-calling 行为：
+    - 第一次调用：调用第一个可用工具
+    - 后续调用：返回基于工具结果的总结
     """
 
     def __init__(self, response: str = ""):
         self._response = response
+        self._call_count = 0
 
     async def chat(
         self,
@@ -183,8 +186,53 @@ class MockLLMClient(LLMClient):
         tool_choice: str | None = None,
         **kwargs,
     ) -> LLMResponse:
-        """返回模拟响应."""
-        return LLMResponse(content=self._response, tool_calls=None)
+        """返回模拟响应，支持 tool-calling 模拟."""
+        # 无工具或已有工具结果时，返回文本
+        has_tool_results = any(m.get("role") == "tool" for m in messages)
+
+        if tools and not has_tool_results:
+            # 模拟 LLM 决定调用第一个工具
+            tool = tools[0]
+            func = tool["function"]
+            # 根据参数 schema 构造合理的 mock 参数
+            mock_args = self._mock_arguments(func.get("parameters", {}))
+            self._call_count += 1
+            return LLMResponse(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id=f"mock_call_{self._call_count}",
+                        name=func["name"],
+                        arguments=mock_args,
+                    )
+                ],
+            )
+
+        # 有工具结果或无工具时，返回文本
+        content = self._response or "[Mock] 任务已完成"
+        return LLMResponse(content=content, tool_calls=None)
+
+    def _mock_arguments(self, schema: dict) -> dict:
+        """根据 JSON Schema 构造 mock 参数."""
+        args = {}
+        props = schema.get("properties", {})
+        for key, prop in props.items():
+            prop_type = prop.get("type", "string")
+            if prop.get("enum"):
+                args[key] = prop["enum"][0]
+            elif prop_type == "string":
+                args[key] = prop.get("description", key)
+            elif prop_type == "integer":
+                args[key] = prop.get("default", 1)
+            elif prop_type == "number":
+                args[key] = prop.get("default", 1.0)
+            elif prop_type == "boolean":
+                args[key] = True
+            elif prop_type == "array":
+                args[key] = []
+            elif prop_type == "object":
+                args[key] = {}
+        return args
 
 
 # ============================================================================

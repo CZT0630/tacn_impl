@@ -95,12 +95,24 @@ class TACNSystem:
             self.router = AgentCapabilityRouter(registry, routing_config)
 
         # AgentRuntime 或 AgentManager
+        from backend.agent.tools import create_default_tool_registry
+        from backend.agent.llm_agent import HookRegistry, SkillLoader
+
+        tool_registry = create_default_tool_registry()
+        self.hooks = HookRegistry()
+        self.skill_loader = SkillLoader()
+
         if runtime is not None:
             self.runtime = runtime
             self.agent_manager = runtime.manager if hasattr(runtime, 'manager') else None
         else:
             self.runtime = None
-            self.agent_manager = AgentManager(registry, resolved_client)
+            self.agent_manager = AgentManager(
+                registry, resolved_client,
+                tool_registry=tool_registry,
+                hooks=self.hooks,
+                skill_loader=self.skill_loader,
+            )
             self.agent_manager.initialize()
 
     async def process_request(
@@ -162,41 +174,85 @@ class TACNSystem:
         return plan
 
     async def execute_plan(self, plan: ExecutionPlan) -> TaskResult:
-        """执行计划: 分发子任务 → Agent执行 → 收集结果.
+        """执行计划 — 支持并行组 + 上下文传递.
 
-        Args:
-            plan: 执行计划
-
-        Returns:
-            任务执行结果
+        参考 LCC 的并行调度模式:
+        - parallel_groups 内的子任务用 asyncio.gather 并行执行
+        - 上游子任务的结果自动注入下游 agent 的上下文
         """
+        import asyncio
+
         start_time = time.time()
-        results: list[SubTaskResult] = []
+        all_results: list[SubTaskResult] = []
+        results_map: dict[str, dict] = {}  # subtask_id → result dict (用于上下文注入)
 
-        # 按拓扑顺序执行
-        execution_order = self._get_execution_order(plan)
+        if plan.parallel_groups:
+            # 按并行组执行 — 同组内并行，组间串行
+            for group in plan.parallel_groups:
+                tasks = []
+                group_items = []  # (subtask_id, assignment, subtask)
 
-        for subtask_id in execution_order:
-            assignment = self._find_assignment(plan.assignments, subtask_id)
-            if assignment is None:
-                continue
+                for subtask_id in group:
+                    assignment = self._find_assignment(plan.assignments, subtask_id)
+                    if assignment is None:
+                        continue
+                    subtask = plan.subtask_graph.get_subtask(subtask_id)
+                    if subtask is None:
+                        continue
 
-            subtask = plan.subtask_graph.get_subtask(subtask_id)
-            if subtask is None:
-                continue
+                    # 构建上下文: 注入上游结果
+                    context = self._build_upstream_context(plan, results_map, subtask_id)
+                    tasks.append(self.agent_manager.execute_subtask(assignment.agent_id, subtask, context))
+                    group_items.append((subtask_id, assignment))
 
-            # Agent执行子任务
-            result = await self.agent_manager.execute_subtask(
-                assignment.agent_id, subtask
-            )
-            results.append(result)
+                if tasks:
+                    group_results = await asyncio.gather(*tasks, return_exceptions=True)
+                    for (subtask_id, assignment), result in zip(group_items, group_results):
+                        if isinstance(result, Exception):
+                            result = SubTaskResult(
+                                subtask_id=subtask_id,
+                                agent_id=assignment.agent_id,
+                                location=assignment.location,
+                                success=False,
+                                error=str(result),
+                            )
+                        all_results.append(result)
+                        results_map[subtask_id] = {
+                            "agent_id": result.agent_id,
+                            "agent_location": result.location.value,
+                            "success": result.success,
+                            "latency_ms": result.latency_ms,
+                            "output": result.output,
+                            "error": result.error,
+                        }
+        else:
+            # 无并行组 → 按拓扑序串行，但仍传递上下文
+            execution_order = self._get_execution_order(plan)
+            for subtask_id in execution_order:
+                assignment = self._find_assignment(plan.assignments, subtask_id)
+                if assignment is None:
+                    continue
+                subtask = plan.subtask_graph.get_subtask(subtask_id)
+                if subtask is None:
+                    continue
+
+                context = self._build_upstream_context(plan, results_map, subtask_id)
+                result = await self.agent_manager.execute_subtask(assignment.agent_id, subtask, context)
+                all_results.append(result)
+                results_map[subtask_id] = {
+                    "agent_id": result.agent_id,
+                    "agent_location": result.location.value,
+                    "success": result.success,
+                    "latency_ms": result.latency_ms,
+                    "output": result.output,
+                    "error": result.error,
+                }
 
         # 汇总结果
-        total_latency = sum(r.latency_ms for r in results)
-        total_cost = sum(r.cost for r in results)
-        all_success = all(r.success for r in results)
+        total_latency = sum(r.latency_ms for r in all_results)
+        total_cost = sum(r.cost for r in all_results)
+        all_success = all(r.success for r in all_results)
 
-        # 检查截止时间
         status = TaskStatus.COMPLETED
         if not all_success:
             status = TaskStatus.FAILED
@@ -210,22 +266,20 @@ class TACNSystem:
             actual_latency_ms=total_latency,
             actual_cost=total_cost,
             success=all_success,
-            output={
-                "results": [r.model_dump() for r in results],
-            },
-            subtask_results={
-                r.subtask_id: {
-                    "agent_id": r.agent_id,
-                    "agent_location": r.location.value,
-                    "success": r.success,
-                    "latency_ms": r.latency_ms,
-                    "output": r.output,
-                }
-                for r in results
-            },
+            output={"results": [r.model_dump() for r in all_results]},
+            subtask_results=results_map,
             started_at=time.time(),
             completed_at=time.time(),
         )
+
+    def _build_upstream_context(self, plan, results_map: dict, current_subtask_id: str) -> dict:
+        """构建上游上下文 — 把前驱子任务的结果注入当前 agent."""
+        upstream = {}
+        predecessors = plan.subtask_graph.get_predecessors(current_subtask_id)
+        for pred_id in predecessors:
+            if pred_id in results_map:
+                upstream[pred_id] = results_map[pred_id]
+        return {"upstream_results": upstream} if upstream else {}
 
     def _calculate_parallel_groups(self, graph: SubTaskGraph) -> list[list[str]]:
         """计算并行执行组."""

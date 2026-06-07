@@ -62,14 +62,24 @@ class Message:
 
 
 class MessageBus:
-    """消息总线 - 管理Agent之间的通信."""
+    """消息总线 - 管理Agent之间的通信.
 
-    def __init__(self):
-        self._subscribers: dict[str, list[Callable]] = {}  # topic -> callbacks
-        self._agent_subscribers: dict[str, list[Callable]] = {}  # agent_id -> callbacks
+    支持两种模式:
+    - 内存模式 (默认): 消息存在内存，进程重启丢失
+    - 持久化模式: 传入 inbox_dir，消息写入 JSONL 文件 (参考 LCC)
+    """
+
+    def __init__(self, inbox_dir: str | None = None):
+        self._subscribers: dict[str, list[Callable]] = {}
+        self._agent_subscribers: dict[str, list[Callable]] = {}
         self._message_queue: list[Message] = []
         self._message_history: list[Message] = []
         self._max_history = 1000
+        # 持久化模式
+        self._inbox_dir = inbox_dir
+        if inbox_dir:
+            import os
+            os.makedirs(inbox_dir, exist_ok=True)
 
     def subscribe(self, topic: str, callback: Callable[[Message], None]):
         """订阅主题."""
@@ -95,8 +105,39 @@ class MessageBus:
         if len(self._message_history) > self._max_history:
             self._message_history = self._message_history[-self._max_history:]
 
+        # 持久化到文件 (LCC JSONL 模式)
+        if self._inbox_dir and message.receiver_id:
+            self._persist_message(message)
+
         # 处理消息
         self._process_message(message)
+
+    def _persist_message(self, message: Message):
+        """将消息写入接收者的 JSONL 邮箱文件."""
+        import json as _json
+        path = f"{self._inbox_dir}/{message.receiver_id}.jsonl"
+        try:
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(_json.dumps(message.to_dict(), ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+
+    def read_inbox(self, agent_id: str) -> list[dict]:
+        """读取并清空 agent 的邮箱 (LCC drain 模式)."""
+        if not self._inbox_dir:
+            return []
+        import json as _json
+        path = f"{self._inbox_dir}/{agent_id}.jsonl"
+        try:
+            from pathlib import Path
+            p = Path(path)
+            if not p.exists():
+                return []
+            msgs = [_json.loads(line) for line in p.read_text(encoding="utf-8").strip().splitlines() if line]
+            p.write_text("")  # drain
+            return msgs
+        except Exception:
+            return []
 
     def _process_message(self, message: Message):
         """处理消息."""
