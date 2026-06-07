@@ -21,7 +21,6 @@ from backend.parser.subtask_builder import LLMSubTaskBuilder
 from backend.registry.agent_registry import AgentRegistry
 from backend.router.capability_router import AgentCapabilityRouter, RoutingConfig
 from backend.agent.factory import AgentManager
-from backend.agent.runtime import AgentRuntime
 
 
 class TACNSystem:
@@ -50,8 +49,6 @@ class TACNSystem:
         context_registry=None,
         network_model=None,
         mtcc_config=None,
-        # AgentRuntime
-        runtime: Optional[AgentRuntime] = None,
     ):
         self.registry = registry
 
@@ -94,7 +91,7 @@ class TACNSystem:
         else:
             self.router = AgentCapabilityRouter(registry, routing_config)
 
-        # AgentRuntime 或 AgentManager
+        # AgentManager
         from backend.agent.tools import create_default_tool_registry
         from backend.agent.llm_agent import HookRegistry, SkillLoader
 
@@ -102,18 +99,13 @@ class TACNSystem:
         self.hooks = HookRegistry()
         self.skill_loader = SkillLoader()
 
-        if runtime is not None:
-            self.runtime = runtime
-            self.agent_manager = runtime.manager if hasattr(runtime, 'manager') else None
-        else:
-            self.runtime = None
-            self.agent_manager = AgentManager(
-                registry, resolved_client,
-                tool_registry=tool_registry,
-                hooks=self.hooks,
-                skill_loader=self.skill_loader,
-            )
-            self.agent_manager.initialize()
+        self.agent_manager = AgentManager(
+            registry, resolved_client,
+            tool_registry=tool_registry,
+            hooks=self.hooks,
+            skill_loader=self.skill_loader,
+        )
+        self.agent_manager.initialize()
 
     async def process_request(
         self,
