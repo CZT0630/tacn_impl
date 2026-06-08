@@ -9,12 +9,15 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Toast 通知容器 -->
+    <div id="toast-container" class="toast-container"></div>
+
     <div class="container">
         <!-- 侧边栏 -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>TACN</h2>
-                <p class="subtitle">终端智能体算力网络</p>
+                <p class="subtitle">Terminal Agent Computing Network</p>
             </div>
             <nav>
                 <a href="#" class="nav-item active" data-section="task">
@@ -31,7 +34,7 @@
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <p>Agent Layer v0.2</p>
+                <p>TACN Prototype v0.2</p>
             </div>
         </aside>
 
@@ -54,10 +57,11 @@
 
                 <!-- 输入区 -->
                 <div class="input-group">
-                    <textarea id="task-input" placeholder="请输入任务请求，例如：实验楼烟雾传感器报警，请结合摄像头画面判断是否触发消防告警" rows="3"></textarea>
+                    <textarea id="task-input" placeholder="输入复杂任务请求，TACN 将自动解析意图、拆解子任务、路由到合适的智能体..." rows="3"></textarea>
                     <div class="button-group">
                         <button id="process-btn" class="btn primary">处理请求</button>
                         <button id="execute-btn" class="btn secondary" disabled>执行任务</button>
+                        <span class="kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> 提交</span>
                     </div>
                 </div>
 

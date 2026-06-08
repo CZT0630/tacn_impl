@@ -41,11 +41,20 @@ async def get_agents():
             "cost_per_invocation": profile.cost_per_invocation,
             "privacy_level": profile.privacy_level.value,
             "reliability_score": profile.reliability_score,
+            "tool_success_rate": profile.tool_success_rate,
+            "context_hit_rate": profile.context_hit_rate,
+            "observed_latency_ms": profile.observed_latency_ms,
         })
 
     statistics = registry.get_statistics()
 
+    # 反馈统计
+    feedback_stats = {}
+    if hasattr(system, '_feedback') and system._feedback is not None:
+        feedback_stats = system._feedback.get_statistics()
+
     return {
         "agents": agents,
         "statistics": statistics,
+        "feedback": feedback_stats,
     }
