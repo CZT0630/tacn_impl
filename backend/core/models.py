@@ -133,6 +133,67 @@ class SubTaskGraph(BaseModel):
         """获取后继子任务ID."""
         return [e.target_id for e in self.edges if e.source_id == subtask_id]
 
+    def topological_sort(self) -> list[str]:
+        """拓扑排序 — 返回子任务ID的执行顺序.
+
+        Raises:
+            ValueError: 如果图中存在循环依赖
+        """
+        in_degree: dict[str, int] = {st.id: 0 for st in self.subtasks}
+        for edge in self.edges:
+            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
+
+        queue = [st.id for st in self.subtasks if in_degree[st.id] == 0]
+        result: list[str] = []
+
+        while queue:
+            node = queue.pop(0)
+            result.append(node)
+            for edge in self.edges:
+                if edge.source_id == node:
+                    in_degree[edge.target_id] -= 1
+                    if in_degree[edge.target_id] == 0:
+                        queue.append(edge.target_id)
+
+        if len(result) != len(self.subtasks):
+            raise ValueError(
+                f"子任务图存在循环依赖: 排序结果 {len(result)} != 子任务总数 {len(self.subtasks)}"
+            )
+        return result
+
+    def parallel_groups(self) -> list[list[str]]:
+        """计算并行执行组 — 同组内子任务无依赖，可并行执行.
+
+        Returns:
+            按层级分组的子任务ID列表，第一组是无前驱的起始任务
+        """
+        if not self.subtasks:
+            return []
+
+        in_degree: dict[str, int] = {st.id: 0 for st in self.subtasks}
+        for edge in self.edges:
+            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
+
+        levels: dict[str, int] = {}
+        queue: list[tuple[str, int]] = [
+            (st.id, 0) for st in self.subtasks if in_degree[st.id] == 0
+        ]
+
+        while queue:
+            node, level = queue.pop(0)
+            levels[node] = level
+            for edge in self.edges:
+                if edge.source_id == node:
+                    in_degree[edge.target_id] -= 1
+                    if in_degree[edge.target_id] == 0:
+                        queue.append((edge.target_id, level + 1))
+
+        level_groups: dict[int, list[str]] = {}
+        for subtask_id, level in levels.items():
+            level_groups.setdefault(level, []).append(subtask_id)
+
+        return [group for _, group in sorted(level_groups.items())]
+
 
 class AgentCapability(BaseModel):
     """智能体能力."""

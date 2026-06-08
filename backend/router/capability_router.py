@@ -20,11 +20,13 @@ from backend.registry.agent_registry import AgentRegistry
 @dataclass
 class RoutingConfig:
     """路由配置."""
-    capability_weight: float = 0.35
-    latency_weight: float = 0.25
-    cost_weight: float = 0.15
-    privacy_weight: float = 0.15
-    load_weight: float = 0.10
+    capability_weight: float = 0.30
+    latency_weight: float = 0.20
+    cost_weight: float = 0.10
+    privacy_weight: float = 0.10
+    load_weight: float = 0.08
+    reliability_weight: float = 0.12
+    observed_quality_weight: float = 0.10
 
     location_preferences: dict[Location, float] = field(default_factory=lambda: {
         Location.TERMINAL: 0.9,
@@ -96,7 +98,7 @@ class AgentCapabilityRouter:
         assignments: list[AgentAssignment] = []
         agent_load: dict[str, float] = {}
 
-        topo_order = self._topological_sort(graph)
+        topo_order = graph.topological_sort()
 
         for subtask_id in topo_order:
             subtask = graph.get_subtask(subtask_id)
@@ -176,7 +178,7 @@ class AgentCapabilityRouter:
         return agent_level >= subtask_level
 
     def _score_agent(self, subtask: SubTask, agent: AgentProfile) -> AgentMatchResult:
-        """为智能体评分."""
+        """为智能体评分 — 包含反馈指标（可靠性、观测质量）."""
         scores: dict[str, float] = {}
 
         scores["capability"] = self._score_capability(subtask, agent)
@@ -185,6 +187,10 @@ class AgentCapabilityRouter:
         scores["privacy"] = self._score_privacy(subtask, agent)
         scores["load"] = self._score_load(agent)
         scores["location"] = self._score_location(agent)
+        scores["reliability"] = agent.reliability_score
+        scores["observed_quality"] = (
+            agent.tool_success_rate * 0.5 + agent.context_hit_rate * 0.5
+        )
 
         total_score = (
             scores["capability"] * self.config.capability_weight
@@ -193,6 +199,8 @@ class AgentCapabilityRouter:
             + scores["privacy"] * self.config.privacy_weight
             + scores["load"] * self.config.load_weight
             + scores["location"] * 0.05
+            + scores["reliability"] * self.config.reliability_weight
+            + scores["observed_quality"] * self.config.observed_quality_weight
         )
 
         # 确保分数不超过1.0
@@ -287,27 +295,6 @@ class AgentCapabilityRouter:
         computation_cost = subtask.estimated_computation * 0.001
         data_cost = subtask.estimated_data_size_kb * 0.0001
         return base_cost + computation_cost + data_cost
-
-    def _topological_sort(self, graph: SubTaskGraph) -> list[str]:
-        """拓扑排序."""
-        in_degree: dict[str, int] = {st.id: 0 for st in graph.subtasks}
-        for edge in graph.edges:
-            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
-
-        queue = [st.id for st in graph.subtasks if in_degree[st.id] == 0]
-        result: list[str] = []
-
-        while queue:
-            node = queue.pop(0)
-            result.append(node)
-
-            for edge in graph.edges:
-                if edge.source_id == node:
-                    in_degree[edge.target_id] -= 1
-                    if in_degree[edge.target_id] == 0:
-                        queue.append(edge.target_id)
-
-        return result
 
     def _get_agents_with_available_capacity(
         self, current_load: dict[str, float]

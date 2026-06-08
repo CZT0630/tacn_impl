@@ -43,13 +43,15 @@ class MTCCDecision(BaseModel):
 class MTCCConfig:
     """MTCC 编排配置."""
 
-    capability_weight: float = 0.25
-    model_quality_weight: float = 0.20
-    tool_coverage_weight: float = 0.10
-    context_relevance_weight: float = 0.10
-    latency_weight: float = 0.15
-    cost_weight: float = 0.10
-    privacy_weight: float = 0.10
+    capability_weight: float = 0.20
+    model_quality_weight: float = 0.15
+    tool_coverage_weight: float = 0.08
+    context_relevance_weight: float = 0.08
+    latency_weight: float = 0.12
+    cost_weight: float = 0.08
+    privacy_weight: float = 0.08
+    reliability_weight: float = 0.12
+    observed_quality_weight: float = 0.09
     location_preferences: dict[Location, float] = field(
         default_factory=lambda: {
             Location.TERMINAL: 0.9,
@@ -118,24 +120,7 @@ class MTCCOrchestrator:
         """为整个子任务图做出 MTCC 联合决策."""
         decisions = []
 
-        # 拓扑排序
-        in_degree = {st.id: 0 for st in graph.subtasks}
-        for edge in graph.edges:
-            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
-
-        queue = [st.id for st in graph.subtasks if in_degree[st.id] == 0]
-        topo_order = []
-
-        while queue:
-            node = queue.pop(0)
-            topo_order.append(node)
-            for edge in graph.edges:
-                if edge.source_id == node:
-                    in_degree[edge.target_id] -= 1
-                    if in_degree[edge.target_id] == 0:
-                        queue.append(edge.target_id)
-
-        for subtask_id in topo_order:
+        for subtask_id in graph.topological_sort():
             subtask = graph.get_subtask(subtask_id)
             if subtask is None:
                 continue
@@ -186,6 +171,11 @@ class MTCCOrchestrator:
         scores["latency"] = self._score_latency(subtask, agent)
         scores["cost"] = self._score_cost(subtask, agent)
         scores["privacy"] = self._score_privacy(subtask, agent, privacy_action)
+        # 反馈指标 — 来自 ExecutionFeedback 的长期观测
+        scores["reliability"] = agent.reliability_score
+        scores["observed_quality"] = (
+            agent.tool_success_rate * 0.5 + agent.context_hit_rate * 0.5
+        )
 
         cfg = self.config
         total_score = (
@@ -196,6 +186,8 @@ class MTCCOrchestrator:
             + scores["latency"] * cfg.latency_weight
             + scores["cost"] * cfg.cost_weight
             + scores["privacy"] * cfg.privacy_weight
+            + scores["reliability"] * cfg.reliability_weight
+            + scores["observed_quality"] * cfg.observed_quality_weight
         )
         total_score = min(1.0, total_score)
 

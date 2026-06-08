@@ -8,10 +8,6 @@ from typing import Any, Optional
 from backend.core.models import (
     AgentAssignment,
     ExecutionPlan,
-    Intent,
-    Location,
-    SubTaskGraph,
-    SubTaskResult,
     TaskResult,
     TaskStatus,
 )
@@ -107,6 +103,10 @@ class TACNSystem:
         )
         self.agent_manager.initialize()
 
+        # 反馈闭环 — 执行后自动更新 Agent 可靠性指标
+        from backend.orchestration.feedback import ExecutionFeedback
+        self._feedback = ExecutionFeedback(registry)
+
     async def process_request(
         self,
         request: str,
@@ -140,7 +140,7 @@ class TACNSystem:
             assignments = self.router.route_subtask_graph(subtask_graph)
 
         # 5. 计算并行组
-        parallel_groups = self._calculate_parallel_groups(subtask_graph)
+        parallel_groups = subtask_graph.parallel_groups()
 
         # 6. 汇总指标
         total_latency = sum(a.estimated_duration_ms for a in assignments)
@@ -166,84 +166,17 @@ class TACNSystem:
         return plan
 
     async def execute_plan(self, plan: ExecutionPlan) -> TaskResult:
-        """执行计划 — 支持并行组 + 上下文传递.
+        """执行计划 — 委托给 AgentManager，汇总后触发反馈更新.
 
-        参考 LCC 的并行调度模式:
-        - parallel_groups 内的子任务用 asyncio.gather 并行执行
-        - 上游子任务的结果自动注入下游 agent 的上下文
+        AgentManager 负责并行调度 + 上下文传递，
+        TACNSystem 负责汇总结果 + 触发 ExecutionFeedback.
         """
-        import asyncio
+        raw = await self.agent_manager.execute_plan(plan)
 
-        start_time = time.time()
-        all_results: list[SubTaskResult] = []
-        results_map: dict[str, dict] = {}  # subtask_id → result dict (用于上下文注入)
-
-        if plan.parallel_groups:
-            # 按并行组执行 — 同组内并行，组间串行
-            for group in plan.parallel_groups:
-                tasks = []
-                group_items = []  # (subtask_id, assignment, subtask)
-
-                for subtask_id in group:
-                    assignment = self._find_assignment(plan.assignments, subtask_id)
-                    if assignment is None:
-                        continue
-                    subtask = plan.subtask_graph.get_subtask(subtask_id)
-                    if subtask is None:
-                        continue
-
-                    # 构建上下文: 注入上游结果
-                    context = self._build_upstream_context(plan, results_map, subtask_id)
-                    tasks.append(self.agent_manager.execute_subtask(assignment.agent_id, subtask, context))
-                    group_items.append((subtask_id, assignment))
-
-                if tasks:
-                    group_results = await asyncio.gather(*tasks, return_exceptions=True)
-                    for (subtask_id, assignment), result in zip(group_items, group_results):
-                        if isinstance(result, Exception):
-                            result = SubTaskResult(
-                                subtask_id=subtask_id,
-                                agent_id=assignment.agent_id,
-                                location=assignment.location,
-                                success=False,
-                                error=str(result),
-                            )
-                        all_results.append(result)
-                        results_map[subtask_id] = {
-                            "agent_id": result.agent_id,
-                            "agent_location": result.location.value,
-                            "success": result.success,
-                            "latency_ms": result.latency_ms,
-                            "output": result.output,
-                            "error": result.error,
-                        }
-        else:
-            # 无并行组 → 按拓扑序串行，但仍传递上下文
-            execution_order = self._get_execution_order(plan)
-            for subtask_id in execution_order:
-                assignment = self._find_assignment(plan.assignments, subtask_id)
-                if assignment is None:
-                    continue
-                subtask = plan.subtask_graph.get_subtask(subtask_id)
-                if subtask is None:
-                    continue
-
-                context = self._build_upstream_context(plan, results_map, subtask_id)
-                result = await self.agent_manager.execute_subtask(assignment.agent_id, subtask, context)
-                all_results.append(result)
-                results_map[subtask_id] = {
-                    "agent_id": result.agent_id,
-                    "agent_location": result.location.value,
-                    "success": result.success,
-                    "latency_ms": result.latency_ms,
-                    "output": result.output,
-                    "error": result.error,
-                }
-
-        # 汇总结果
-        total_latency = sum(r.latency_ms for r in all_results)
-        total_cost = sum(r.cost for r in all_results)
-        all_success = all(r.success for r in all_results)
+        # 转换为 TaskResult
+        all_success = raw["status"] == "completed"
+        total_latency = raw["total_latency_ms"]
+        total_cost = raw["total_cost"]
 
         status = TaskStatus.COMPLETED
         if not all_success:
@@ -251,85 +184,24 @@ class TACNSystem:
         if plan.intent.deadline_ms and total_latency > plan.intent.deadline_ms:
             status = TaskStatus.TIMEOUT
 
-        return TaskResult(
+        task_result = TaskResult(
             task_id=plan.task_id,
             plan_id=plan.id,
             status=status,
             actual_latency_ms=total_latency,
             actual_cost=total_cost,
             success=all_success,
-            output={"results": [r.model_dump() for r in all_results]},
-            subtask_results=results_map,
+            output=raw,
+            subtask_results=raw.get("results", {}),
             started_at=time.time(),
             completed_at=time.time(),
         )
 
-    def _build_upstream_context(self, plan, results_map: dict, current_subtask_id: str) -> dict:
-        """构建上游上下文 — 把前驱子任务的结果注入当前 agent."""
-        upstream = {}
-        predecessors = plan.subtask_graph.get_predecessors(current_subtask_id)
-        for pred_id in predecessors:
-            if pred_id in results_map:
-                upstream[pred_id] = results_map[pred_id]
-        return {"upstream_results": upstream} if upstream else {}
+        # 触发反馈更新（资源-能力优化环）
+        if self._feedback is not None:
+            self._feedback.update_after_execution(task_result, plan)
 
-    def _calculate_parallel_groups(self, graph: SubTaskGraph) -> list[list[str]]:
-        """计算并行执行组."""
-        if not graph.subtasks:
-            return []
-
-        in_degree = {st.id: 0 for st in graph.subtasks}
-        for edge in graph.edges:
-            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
-
-        levels = {}
-        queue = [(st.id, 0) for st in graph.subtasks if in_degree[st.id] == 0]
-
-        while queue:
-            node, level = queue.pop(0)
-            levels[node] = level
-            for edge in graph.edges:
-                if edge.source_id == node:
-                    in_degree[edge.target_id] -= 1
-                    if in_degree[edge.target_id] == 0:
-                        queue.append((edge.target_id, level + 1))
-
-        level_groups = {}
-        for subtask_id, level in levels.items():
-            level_groups.setdefault(level, []).append(subtask_id)
-
-        return [group for _, group in sorted(level_groups.items())]
-
-    def _get_execution_order(self, plan: ExecutionPlan) -> list[str]:
-        """获取执行顺序."""
-        if plan.parallel_groups:
-            order = []
-            for group in plan.parallel_groups:
-                order.extend(group)
-            return order
-
-        graph = plan.subtask_graph
-        in_degree = {st.id: 0 for st in graph.subtasks}
-        for edge in graph.edges:
-            in_degree[edge.target_id] = in_degree.get(edge.target_id, 0) + 1
-
-        queue = [st.id for st in graph.subtasks if in_degree[st.id] == 0]
-        result = []
-        while queue:
-            node = queue.pop(0)
-            result.append(node)
-            for edge in graph.edges:
-                if edge.source_id == node:
-                    in_degree[edge.target_id] -= 1
-                    if in_degree[edge.target_id] == 0:
-                        queue.append(edge.target_id)
-        return result
-
-    def _find_assignment(self, assignments, subtask_id: str):
-        for a in assignments:
-            if a.subtask_id == subtask_id:
-                return a
-        return None
+        return task_result
 
     def _decision_to_assignment(self, decision) -> AgentAssignment:
         """将 MTCCDecision 转换为 AgentAssignment."""
