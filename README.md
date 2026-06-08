@@ -2,6 +2,10 @@
 
 > **TACN，Terminal Agent Computing Network，终端智能体算力网络**，是面向 5G-A/6G 智能网络的一种通用网络化智能服务架构。它以复杂意图为输入，以智能体能力为调度对象，以模型—工具—算力—上下文联合编排为核心机制，实现终端、边缘和云端智能体的网络化协同服务。
 
+## 项目启动教程
+uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
+http://localhost:8000
+
 ---
 
 ## 1. TACN 的提出背景
