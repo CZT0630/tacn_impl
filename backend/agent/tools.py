@@ -147,61 +147,163 @@ class ToolRegistry:
 
 
 # ============================================================================
-# 内置工具实现 — IoT 场景
+# 内置工具实现 — IoT 场景 (从 DataPool 读取真实数据)
 # ============================================================================
 
 
+def _get_datapool():
+    """获取 DataPool 单例."""
+    from backend.core.datapool import DataPool
+    return DataPool.get_instance()
+
+
+# 默认阈值配置
+_SENSOR_THRESHOLDS = {
+    "temperature": {"warning": 50, "critical": 60, "unit": "°C"},
+    "humidity": {"warning": 70, "critical": 80, "unit": "%"},
+    "smoke": {"warning": 0.05, "critical": 0.10, "unit": "ppm"},
+    "motion": {"unit": "bool"},
+    "light": {"unit": "lux"},
+}
+
+
 async def _read_sensor(sensor_type: str = "temperature", location: str = "未知位置") -> dict:
-    """读取传感器数据."""
-    mock_data = {
-        "temperature": {"value": 42.5, "unit": "°C", "threshold": 60, "status": "warning"},
-        "humidity": {"value": 65.0, "unit": "%", "threshold": 80, "status": "normal"},
-        "smoke": {"value": 0.12, "unit": "ppm", "threshold": 0.05, "status": "ALERT"},
-        "motion": {"detected": True, "confidence": 0.92, "zone": "A3"},
-        "light": {"value": 350, "unit": "lux", "status": "normal"},
+    """读取传感器数据 — 从 DataPool 获取真实值."""
+    pool = _get_datapool()
+
+    # 尝试从多个可能的 source 读取
+    sources = [f"sensor_{location}", f"sensor_{sensor_type}", "sensor_default"]
+    value = None
+    matched_source = None
+    for src in sources:
+        v = pool.get_latest_value(src, sensor_type)
+        if v is not None:
+            value = v
+            matched_source = src
+            break
+
+    if value is None:
+        # DataPool 无数据时，返回提示（非硬编码 mock）
+        return {
+            "sensor_type": sensor_type,
+            "location": location,
+            "data": None,
+            "status": "no_data",
+            "message": f"传感器 {sensor_type}@{location} 暂无数据，请通过 POST /api/data/push 灌入",
+        }
+
+    # 判断阈值状态
+    thresholds = _SENSOR_THRESHOLDS.get(sensor_type, {})
+    status = "normal"
+    if "critical" in thresholds and isinstance(value, (int, float)):
+        if value >= thresholds["critical"]:
+            status = "CRITICAL"
+        elif value >= thresholds["warning"]:
+            status = "warning"
+
+    return {
+        "sensor_type": sensor_type,
+        "location": location,
+        "source": matched_source,
+        "data": {
+            "value": value,
+            "unit": thresholds.get("unit", ""),
+            "threshold": thresholds.get("critical"),
+            "status": status,
+        },
     }
-    data = mock_data.get(sensor_type, {"value": 0, "status": "unknown"})
-    return {"sensor_type": sensor_type, "location": location, "data": data}
 
 
 async def _capture_image(camera_id: str = "cam_01", detect_objects: list[str] | None = None) -> dict:
-    """摄像头采集图像并检测目标."""
+    """摄像头采集图像 — 从 DataPool 获取检测结果."""
+    pool = _get_datapool()
+
+    # 从 DataPool 读取摄像头数据
+    data = pool.get_latest_value(f"camera_{camera_id}", "detection")
+    if data is not None:
+        return data
+
+    # 读取原始图像 URL
+    image_url = pool.get_latest_value(f"camera_{camera_id}", "image")
+    if image_url is not None:
+        return {
+            "camera_id": camera_id,
+            "image_url": image_url,
+            "objects_detected": [],
+            "message": "图像已获取，但无检测结果。请通过 POST /api/data/push 推送 detection 数据",
+        }
+
     return {
-        "image_captured": True,
-        "resolution": "1920x1080",
-        "objects_detected": [
-            {"label": "person", "confidence": 0.95, "bbox": [100, 200, 300, 500]},
-            {"label": "smoke", "confidence": 0.87, "bbox": [400, 100, 600, 350]},
-        ],
+        "camera_id": camera_id,
+        "image_captured": False,
+        "status": "no_data",
+        "message": f"摄像头 {camera_id} 暂无数据，请通过 POST /api/data/push 灌入",
     }
 
 
 async def _search_knowledge_base(query: str, top_k: int = 3) -> dict:
-    """从知识库检索相关文档."""
+    """从知识库检索 — 从 DataPool 获取文档."""
+    pool = _get_datapool()
+
+    # 从 DataPool 读取知识库数据
+    docs = pool.get_latest_value("knowledge_base", "documents")
+    if docs is None:
+        docs = pool.get_latest_value("kb", "documents")
+
+    if docs is not None and isinstance(docs, list):
+        # 简单关键词匹配 (真实场景应使用向量检索)
+        query_lower = query.lower()
+        scored = []
+        for doc in docs:
+            text = json.dumps(doc, ensure_ascii=False).lower()
+            # 计算简单的关键词命中率
+            keywords = query_lower.split()
+            hits = sum(1 for kw in keywords if kw in text)
+            if hits > 0:
+                scored.append((hits / len(keywords), doc))
+        scored.sort(key=lambda x: -x[0])
+        return {
+            "query": query,
+            "results": [
+                {
+                    "title": d.get("title", ""),
+                    "relevance": round(score, 2),
+                    "snippet": d.get("content", d.get("snippet", ""))[:200],
+                }
+                for score, d in scored[:top_k]
+            ],
+        }
+
     return {
         "query": query,
-        "results": [
-            {"title": "火灾应急预案 v2.1", "relevance": 0.94, "snippet": "烟雾浓度超过阈值时立即触发告警..."},
-            {"title": "实验楼安全规范", "relevance": 0.88, "snippet": "温度超过60°C需启动消防系统..."},
-            {"title": "维护记录 #1024", "relevance": 0.82, "snippet": "上次传感器校准: 2026-05-01..."},
-        ],
+        "results": [],
+        "status": "no_data",
+        "message": "知识库为空，请通过 POST /api/data/push 推送 source=knowledge_base, type=documents",
     }
 
 
 async def _send_alert(message: str, severity: str = "info", recipients: list[str] | None = None) -> dict:
-    """发送告警通知."""
-    return {
-        "sent": True,
+    """发送告警通知 — 记录到 DataPool."""
+    pool = _get_datapool()
+    alert_data = {
         "message": message,
         "severity": severity,
         "recipients": recipients or ["admin"],
+        "sent": True,
         "channel": "sms+push",
+        "ts": __import__("time").time(),
     }
+    # 记录到 DataPool (供前端展示告警历史)
+    pool.push("system", "alert", alert_data)
+    return alert_data
 
 
 async def _control_device(device: str, action: str = "status") -> dict:
-    """控制设备 (消防系统、门禁、通风等)."""
-    return {"device": device, "action": action, "success": True, "message": f"{device} 已{action}"}
+    """控制设备 — 记录到 DataPool."""
+    pool = _get_datapool()
+    result = {"device": device, "action": action, "success": True, "message": f"{device} 已{action}"}
+    pool.push("system", "device_control", result)
+    return result
 
 
 async def _d2d_communicate(target_device: str, purpose: str = "data_share", data: dict | None = None) -> dict:
@@ -210,20 +312,53 @@ async def _d2d_communicate(target_device: str, purpose: str = "data_share", data
 
 
 async def _analyze_data(data: dict, analysis_type: str = "anomaly_detection") -> dict:
-    """数据分析与推理."""
+    """数据分析与推理 — 从输入数据中分析."""
+    if not data:
+        pool = _get_datapool()
+        # 尝试从 DataPool 获取待分析数据
+        sensor_snapshot = pool.get_all_latest()
+        if sensor_snapshot:
+            data = sensor_snapshot
+        else:
+            return {
+                "analysis_type": analysis_type,
+                "findings": [],
+                "message": "无数据可分析，请提供 data 参数或通过 DataPool 灌入传感器数据",
+            }
+
+    # 基于规则的简单分析
+    findings = []
+    if isinstance(data, dict):
+        for key, val in data.items():
+            if isinstance(val, dict):
+                status = val.get("status", "")
+                if status in ("CRITICAL", "ALERT"):
+                    findings.append({
+                        "type": "anomaly",
+                        "description": f"{key} 状态异常: {status}",
+                        "severity": "high",
+                        "confidence": 0.9,
+                    })
+                elif status == "warning":
+                    findings.append({
+                        "type": "warning",
+                        "description": f"{key} 状态告警: {status}",
+                        "severity": "medium",
+                        "confidence": 0.8,
+                    })
+
+    recommendation = "建议立即处理" if findings else "数据正常，无需处理"
     return {
         "analysis_type": analysis_type,
-        "findings": [
-            {"type": "anomaly", "description": "烟雾浓度异常升高", "severity": "high", "confidence": 0.92},
-            {"type": "trend", "description": "温度呈上升趋势", "confidence": 0.85},
-        ],
-        "recommendation": "建议立即启动消防告警并疏散人员",
+        "data_keys": list(data.keys()) if isinstance(data, dict) else [],
+        "findings": findings,
+        "recommendation": recommendation,
     }
 
 
 async def _web_search(query: str) -> dict:
-    """网络搜索."""
-    return {"query": query, "results": [{"title": "搜索结果", "snippet": "..."}]}
+    """网络搜索 (仅云端可用)."""
+    return {"query": query, "results": [{"title": "搜索结果 (需配置外部 API)", "snippet": "..."}]}
 
 
 # ============================================================================

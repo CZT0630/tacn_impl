@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.api import agents, experiments, tasks
+from backend.api import agents, data, experiments, tasks
 
 app = FastAPI(
     title="TACN - Terminal Agent Computing Network",
@@ -38,6 +38,7 @@ app.add_middleware(
 # 路由
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
+app.include_router(data.router, prefix="/api/data", tags=["data"])
 app.include_router(experiments.router, prefix="/api/experiments", tags=["experiments"])
 
 # 静态文件 (前端)
